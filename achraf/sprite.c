@@ -41,6 +41,21 @@ void end_sdl(char ok,                                               // fin norma
 
 
 
+SDL_Texture* load_texture_from_image(char  *  file_image_name, SDL_Window *window, SDL_Renderer *renderer ){
+    SDL_Surface *my_image = NULL;           // Variable de passage
+    SDL_Texture* my_texture = NULL;         // La texture
+
+    my_image = IMG_Load(file_image_name);   // Chargement de l'image dans la surface
+                                            // image=SDL_LoadBMP(file_image_name); fonction standard de la SDL, 
+                                            // uniquement possible si l'image est au format bmp */
+    if (my_image == NULL) end_sdl(0, "Chargement de l'image impossible", window, renderer);
+   
+    my_texture = SDL_CreateTextureFromSurface(renderer, my_image); // Chargement de l'image de la surface vers la texture
+    SDL_FreeSurface(my_image);                                     // la SDL_Surface ne sert que comme élément transitoire 
+    if (my_texture == NULL) end_sdl(0, "Echec de la transformation de la surface en texture", window, renderer);
+
+    return my_texture;
+}
 
 
 int main() {
@@ -68,10 +83,12 @@ int main() {
     SDL_RenderClear(renderer);
     
 
+    // ici le code d'animation
+    
 
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
-    //SDL_DestroyTexture(SDL_Texture);
+    //SDL_DestroyTexture(bot);
     SDL_Quit();
 
     return 0;

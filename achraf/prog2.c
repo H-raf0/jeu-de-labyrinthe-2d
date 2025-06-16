@@ -105,16 +105,14 @@ int main(int argc, char** argv) {
 	/*********************************************************************************************************************/
 	/*                                     On dessine dans le renderer                                                   */
 	/*********************************************************************************************************************/
-	/*             Cette partie pourrait avantageusement être remplacée par la boucle évènementielle                     */ 
 
-	// appel de la fonction qui crée l'image 
 	double t, x, y;
 	int N = 300;
 
 	
 	for(int i = 0; i <= N; ++i){
 
-		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);  
 		SDL_RenderClear(renderer);
 
 		t = 2 * M_PI * i / N;
