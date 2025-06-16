@@ -58,6 +58,58 @@ SDL_Texture* load_texture_from_image(char  *  file_image_name, SDL_Window *windo
 }
 
 
+void ShowMovingLayer(SDL_Texture *my_texture, SDL_Rect window_dimensions, SDL_Renderer *renderer, int x) {
+
+    SDL_Rect 
+        source = {0},                         // Rectangle définissant la zone de la texture à récupérer
+        destination = {0};                    // Rectangle définissant où la zone_source doit être déposée dans le renderer
+
+    SDL_QueryTexture(my_texture, NULL, NULL,
+             &source.w, &source.h);       // Récupération des dimensions de l'image
+
+
+    destination = window_dimensions;              // On fixe les dimensions de l'affichage à  celles de la fenêtre
+    destination.x = x;  
+    destination.y = (window_dimensions.h - destination.h) / 2;  // La destination est au milieu de la hauteur de la fenêtre
+
+
+    SDL_RenderCopy(renderer, my_texture,&source,&destination);                 // Création de l'élément à afficher
+}
+
+void play_with_texture_2(SDL_Texture* my_texture, SDL_Window* window,
+                         SDL_Renderer* renderer) {
+    SDL_Rect source =
+                {0},  // Rectangle définissant la zone de la texture à récupérer
+        window_dimensions = {0},  // Rectangle définissant la fenêtre, on
+                                    // n'utilisera que largeur et hauteur
+        destination = {0};  // Rectangle définissant où la zone_source doit être
+                            // déposée dans le renderer
+
+    SDL_GetWindowSize(
+        window, &window_dimensions.w,
+        &window_dimensions.h);  // Récupération des dimensions de la fenêtre
+    SDL_QueryTexture(my_texture, NULL, NULL, &source.w,
+                    &source.h);  // Récupération des dimensions de l'image
+
+    float zoom = 1.5;                 // Facteur de zoom à appliquer
+    destination.w = source.w * zoom;  // La destination est un zoom de la source
+    destination.h = source.h * zoom;  // La destination est un zoom de la source
+    destination.x =
+        (window_dimensions.w - destination.w) /
+        2;  // La destination est au milieu de la largeur de la fenêtre
+    destination.y =
+        (window_dimensions.h - destination.h) /
+        2;  // La destination est au milieu de la hauteur de la fenêtre
+
+    SDL_RenderCopy(renderer, my_texture,  // Préparation de l'affichage
+                    &source, &destination);
+    SDL_RenderPresent(renderer);
+    SDL_Delay(1000);
+
+    SDL_RenderClear(renderer);  // Effacer la fenêtre
+}
+
+
 int main() {
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         SDL_Log("Error : SDL initialisation - %s\n", SDL_GetError());              
@@ -80,15 +132,44 @@ int main() {
     }
 
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    SDL_RenderClear(renderer);
     
-
     // ici le code d'animation
+
+    SDL_Rect window_dimensions = {0};
+
+    SDL_GetWindowSize(window,              // Récupération des dimensions de la fenêtre
+            &window_dimensions.w,
+            &window_dimensions.h);
+
+    SDL_Texture * bg= load_texture_from_image("./img/Background.png",window,renderer);
+
+    int speed1 = 1;
+    int x1=0,x2=window_dimensions.w;
+    //play_with_texture_2(bg, window, renderer);
+    while (1) {
+        
+
+        SDL_RenderClear(renderer);
+        ShowMovingLayer(bg, window_dimensions, renderer, x1);
+        ShowMovingLayer(bg, window_dimensions, renderer, x2);
+        SDL_RenderPresent(renderer);
+        
+        x1 -= 1*speed1;
+        x2 -= 1*speed1;
+        if(x1 == -window_dimensions.w-1) x1 = window_dimensions.w;
+        if(x2 == -window_dimensions.w-1) x2 = window_dimensions.w;
+        SDL_Delay(1); 
+    }
     
+    /*SDL_RenderClear(renderer);           // Effacer l'image précédente avant de dessiner la nouvelle
+    ShowMovingLayer(bg, window_dimensions, renderer);
+    SDL_RenderPresent(renderer); 
+    SDL_Delay(200); */
+
 
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
-    //SDL_DestroyTexture(bot);
+    SDL_DestroyTexture(bg);
     SDL_Quit();
 
     return 0;
