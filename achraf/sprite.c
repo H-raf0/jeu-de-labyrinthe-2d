@@ -6,7 +6,7 @@
 
 #define SCREEN_WIDTH 1920
 #define SCREEN_HEIGHT 1080
-
+#define layersNb 5
 
 void end_sdl(char ok,                                               // fin normale : ok = 0 ; anormale ok = 1
     char const* msg,                                       // message à afficher
@@ -141,25 +141,45 @@ int main() {
             &window_dimensions.w,
             &window_dimensions.h);
 
-    SDL_Texture * bg= load_texture_from_image("./img/Background.png",window,renderer);
+    //load layer
+    SDL_Texture* layers[layersNb];
 
-    int speed1 = 1;
-    int x1=0,x2=window_dimensions.w;
-    //play_with_texture_2(bg, window, renderer);
-    while (1) {
-        
-
-        SDL_RenderClear(renderer);
-        ShowMovingLayer(bg, window_dimensions, renderer, x1);
-        ShowMovingLayer(bg, window_dimensions, renderer, x2);
-        SDL_RenderPresent(renderer);
-        
-        x1 -= 1*speed1;
-        x2 -= 1*speed1;
-        if(x1 == -window_dimensions.w-1) x1 = window_dimensions.w;
-        if(x2 == -window_dimensions.w-1) x2 = window_dimensions.w;
-        SDL_Delay(1); 
+    for (int i = 0; i < layersNb; i++) {
+        char filename[100];
+        sprintf(filename, "./img/winter/%d.png", i + 1);
+        layers[i] = load_texture_from_image(filename, window, renderer);
     }
+
+    float x[layersNb];  // Position de chaque couche
+    float speed[layersNb] = {0.2, 0.4, 0.7, 1.0, 1.5};  // Vitesse de fond -> avant-plan
+
+    for (int i = 0; i < layersNb; i++) {
+        x[i] = 0;
+    }
+
+
+    int x1=0,x2=window_dimensions.w;
+    
+    while (1) {
+        SDL_RenderClear(renderer);
+
+        for (int i = 0; i < layersNb; i++) {
+            // Affiche chaque couche deux fois pour créer un effet de scrolling infini
+            ShowMovingLayer(layers[i], window_dimensions, renderer, (int)x[i]);
+            ShowMovingLayer(layers[i], window_dimensions, renderer, (int)(x[i] + window_dimensions.w));
+
+            // Mise à jour de la position avec la vitesse
+            x[i] -= speed[i];
+
+            // Reboucle quand la première image sort de l'écran
+            if (x[i] <= -window_dimensions.w)
+                x[i] += window_dimensions.w;
+        }
+
+        SDL_RenderPresent(renderer);
+        SDL_Delay(16);  // ~60 FPS
+    }
+
     
     /*SDL_RenderClear(renderer);           // Effacer l'image précédente avant de dessiner la nouvelle
     ShowMovingLayer(bg, window_dimensions, renderer);
@@ -169,7 +189,7 @@ int main() {
 
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
-    SDL_DestroyTexture(bg);
+    //SDL_DestroyTexture(bg);
     SDL_Quit();
 
     return 0;
