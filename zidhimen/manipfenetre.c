@@ -33,34 +33,23 @@ SDL_Window* CREATEWindowfenetre(int posX,int posY, int length,int height,SDL_Ren
     SDL_RenderPresent(*renderer);
     return window;
 }
-void MoveWindows(SDL_Window *windowsArray[],int count){
-    for (int i = 0; i < count; i++) {
-        int x, y;
-        SDL_GetWindowPosition(windowsArray[i], &x, &y);
-        SDL_SetWindowPosition(windowsArray[i], x + 60, y);
-    }
-    
-
+void fermeture(SDL_Window *window, SDL_Renderer *renderer){
+    /* on referme tout ce qu'on a ouvert en ordre inverse de la création */
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
 }
 
 void horizontal(SDL_Window **windowsArray, SDL_Renderer **renderersArray){
     int y=350;//position initial
     int x=0;//position de debut de x 
-    for(int i=0; i<90; i++){
+    for(int i=0; i<86; i++){
         x+=20;
-        windowsArray[i] = CREATEWindowfenetre(x, y, 100, 100, &renderersArray[i]);
+        windowsArray[i] = CREATEWindowfenetre(x, y, 100+i, 100+i, &renderersArray[i]);
         
         
     }
     
-}
-
-
-
-
-
-
-
+} 
 int main(){
     int nbWaves = 1;
     int windowsNb = 8*nbWaves;
