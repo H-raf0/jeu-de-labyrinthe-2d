@@ -83,7 +83,7 @@ void CreateWaveWindows(SDL_Window **windowsArray, SDL_Renderer **renderersArray,
 }
 
 
-void MoveWindows(SDL_Window *windowsArray[], int count) {
+void MoveWindows(SDL_Window **windowsArray, int count) {
     for (int i = 0; i < count; i++) {
         int x, y;
         SDL_GetWindowPosition(windowsArray[i], &x, &y);
