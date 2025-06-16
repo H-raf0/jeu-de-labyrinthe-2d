@@ -63,11 +63,13 @@ void free_window(SDL_Window * window, SDL_Renderer *renderer)
     SDL_DestroyWindow(window);
     SDL_Quit();
 }
-void CreatediagWindows(SDL_Window ** windowsArray, SDL_Renderer ** renderersArray, int a , int b, int N )
+
+void CreatediagWindowsdim(SDL_Window ** windowsArray, SDL_Renderer ** renderersArray, int a , int b, int N )
 {
     for (int i=0;i<N;i++)
     {
-        windowsArray[i] = Create_Window(a,b,100,100,&renderersArray[i]);
+        //redimensionner x et y avec le height et largeur
+        windowsArray[i] = Create_Window(a,b,100+4*i,100+4*i,&renderersArray[i]);
         printf("a= %d , b= %d \n", a , b);
         a+=80;
         b+=40;
@@ -91,15 +93,13 @@ void Move_diag(SDL_Window ** windowsArray,int count)
 int main()
 {
     int M=15;
-    int N=30;
+    int N=25;
     int count = 2;
     SDL_Window **windowsArray = (SDL_Window **) malloc(sizeof(SDL_Window *) * N);
     SDL_Renderer **renderersArray = (SDL_Renderer **)malloc(sizeof(SDL_Renderer *) * N);
     Init_SDL();
+    CreatediagWindowsdim(windowsArray,renderersArray,2,2,N);
     
-    for (int j = 0; j < N; j++) {
-      CreatediagWindows(windowsArray,renderersArray,2,2,N);
-    }
      for(int i=0;i<M;i++)
      {
          free_window(windowsArray[i],renderersArray[i]);
