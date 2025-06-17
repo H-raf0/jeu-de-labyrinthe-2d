@@ -100,6 +100,7 @@ int main() {
     SDL_Texture* dragonTex = load_texture_from_image("./img/dragon/drg.png", window, renderer);
 
     int dragonFrame = 0, frameCount = 0;
+    int dragonPos[2] = {window_dimensions.w / 4, window_dimensions.h * 2 / 8};
     int x1[LAYERS_NB], x2[LAYERS_NB];
     float speeds[LAYERS_NB] = {5, 4, 3, 2, 1};  // vitesse de mouvement des couches De l'avant vers l’arriere
 
@@ -112,15 +113,18 @@ int main() {
     int running = 1;
     SDL_Event event;
     // Boucle principale
-    while (running && frameCount <= 1000) {
+    while (running) {
 
         // Gestion des événements clavier
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT)
                 running = 0;
             else if (event.type == SDL_KEYDOWN) {
-                if (event.key.keysym.sym == SDLK_ESCAPE)
-                    running = 0;
+                if (event.key.keysym.sym == SDLK_ESCAPE) running = 0;
+                if(event.key.keysym.sym == SDLK_UP) dragonPos[1] -= 10;
+                if(event.key.keysym.sym == SDLK_DOWN) dragonPos[1] += 10;
+                if(event.key.keysym.sym == SDLK_RIGHT) dragonPos[0] += 10;
+                if(event.key.keysym.sym == SDLK_LEFT) dragonPos[0] -= 10;
             }
         }
 
@@ -140,7 +144,7 @@ int main() {
         }
 
         // Affichage du dragon
-        CreateDragon(dragonTex, window, renderer, window_dimensions.w / 4, window_dimensions.h * 2 / 8, dragonFrame % 3);
+        CreateDragon(dragonTex, window, renderer, dragonPos[0], dragonPos[1], dragonFrame % 3);
 
         // Changement de sprite toutes les 10 frames
         if (frameCount % 10 == 0) dragonFrame++;
