@@ -97,6 +97,7 @@ void move_window_bouncing(SDL_Window* window, SDL_Renderer* renderer)
 
         if (bounced) {
             random_resize(window, &w, &h);
+            SDL_SetWindowSize(window, w, h);
             random_color(renderer);
         }
 
