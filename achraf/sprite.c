@@ -34,13 +34,13 @@ SDL_Texture* load_texture_from_image(char* file_image_name, SDL_Window* window, 
 }
 
 // Affiche une couche de fond avec décalage horizontal
-void ShowMovingLayer(SDL_Texture* texture, SDL_Rect window_dim, SDL_Renderer* renderer, int x) {
+void ShowLayer(SDL_Texture* texture, SDL_Rect window_dim, SDL_Renderer* renderer, int x, int y) {
     SDL_Rect src = {0}, dst = {0};
     SDL_QueryTexture(texture, NULL, NULL, &src.w, &src.h);
 
     dst = window_dim;
     dst.x = x;
-    dst.y = (window_dim.h - dst.h) / 2;
+    dst.y = y;
 
     SDL_RenderCopy(renderer, texture, &src, &dst);
 }
@@ -57,7 +57,7 @@ void CreateDragon(SDL_Texture* texture, SDL_Window* window, SDL_Renderer* render
     int frameW = src.w / columns;
     int frameH = src.h / rows;
 
-    src.x = frameIndex * frameW;
+    src.x = frameIndex * frameW; // colonne (frameIndex+1)
     src.y = 1 * frameH;  // Ligne 2
     src.w = frameW;
     src.h = frameH;
@@ -101,7 +101,7 @@ int main() {
 
     int dragonFrame = 0, frameCount = 0;
     int x1[LAYERS_NB], x2[LAYERS_NB];
-    float speeds[LAYERS_NB] = {5, 4, 3, 2, 1};  // De l’arrière vers l’avant
+    float speeds[LAYERS_NB] = {5, 4, 3, 2, 1};  // vitesse de mouvement des couches De l'avant vers l’arriere
 
     // Initialisation des positions des couches
     for (int i = 0; i < LAYERS_NB; i++) {
@@ -110,13 +110,13 @@ int main() {
     }
 
     // Boucle principale
-    while (frameCount <= 300) {
+    while (frameCount <= 700) {
         SDL_RenderClear(renderer);
 
         // Affichage des couches de fond (parallaxe)
         for (int i = LAYERS_NB - 1; i >= 0; i--) {
-            ShowMovingLayer(layers[i], window_dimensions, renderer, x1[i]);
-            ShowMovingLayer(layers[i], window_dimensions, renderer, x2[i]);
+            ShowLayer(layers[i], window_dimensions, renderer, x1[i], 0);
+            ShowLayer(layers[i], window_dimensions, renderer, x2[i], 0);
 
             x1[i] -= speeds[i];
             x2[i] -= speeds[i];
