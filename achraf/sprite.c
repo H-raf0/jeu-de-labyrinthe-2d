@@ -56,8 +56,6 @@ int main() {
         if (state[SDL_SCANCODE_LEFT])  dragonPos[0] -= 10;
         if (state[SDL_SCANCODE_RIGHT]) dragonPos[0] += 10;
 
-
-
         SDL_RenderClear(renderer);
 
         // Affichage des couches
@@ -79,7 +77,7 @@ int main() {
         if (frameCount % 10 == 0) dragonFrame++;
 
         SDL_RenderPresent(renderer);
-        SDL_Delay(16);  // Environ 60 FPS
+        SDL_Delay(20);
         frameCount++;
     }
 
