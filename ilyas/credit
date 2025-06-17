@@ -1,0 +1,2 @@
+prob1: "ilyas" j'ai rencontré un problème dans le premier exo c'est que l fenetre ne change pas de dimension alors j'ai appelé le prof qui m'as aisé de résoudre de problème en changeant l'emplacement de la fct sdl_setwindowsize qui manipule pas de pointeur après la fct random resize qui fait ca ;
+prob2: "ilyas" j'ai cru qu'on doit juste faire une animation a l'intérieur de la fenetre alors que je dois changé de l'animation a l interieur de la fenetre en cliquant sur n'importe quel "key" en clavier;
