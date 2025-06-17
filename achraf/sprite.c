@@ -75,38 +75,48 @@ void ShowMovingLayer(SDL_Texture *my_texture, SDL_Rect window_dimensions, SDL_Re
 
     SDL_RenderCopy(renderer, my_texture,&source,&destination);                 // Création de l'élément à afficher
 }
+//191  161
+void CreateDragon(SDL_Texture* my_texture, SDL_Window* window, SDL_Renderer* renderer, int posX, int posY, int textNb) {
+    //fun to pepare stuff
+    SDL_Rect 
+        source = {0},                    // Rectangle définissant la zone totale de la planche
+        window_dimensions = {0},         // Rectangle définissant la fenêtre, on n'utilisera que largeur et hauteur
+        destination = {0},               // Rectangle définissant où la zone_source doit être déposée dans le renderer
+        state = {0};                     // Rectangle de la vignette en cours dans la planche 
 
-void play_with_texture_2(SDL_Texture* my_texture, SDL_Window* window,
-                         SDL_Renderer* renderer) {
-    SDL_Rect source =
-                {0},  // Rectangle définissant la zone de la texture à récupérer
-        window_dimensions = {0},  // Rectangle définissant la fenêtre, on
-                                    // n'utilisera que largeur et hauteur
-        destination = {0};  // Rectangle définissant où la zone_source doit être
-                            // déposée dans le renderer
+    SDL_GetWindowSize(window,              // Récupération des dimensions de la fenêtre
+            &window_dimensions.w,
+            &window_dimensions.h);
+    SDL_QueryTexture(my_texture,           // Récupération des dimensions de l'image
+            NULL, NULL,
+            &source.w, &source.h);
 
-    SDL_GetWindowSize(
-        window, &window_dimensions.w,
-        &window_dimensions.h);  // Récupération des dimensions de la fenêtre
-    SDL_QueryTexture(my_texture, NULL, NULL, &source.w,
-                    &source.h);  // Récupération des dimensions de l'image
 
-    float zoom = 1.5;                 // Facteur de zoom à appliquer
-    destination.w = source.w * zoom;  // La destination est un zoom de la source
-    destination.h = source.h * zoom;  // La destination est un zoom de la source
-    destination.x =
-        (window_dimensions.w - destination.w) /
-        2;  // La destination est au milieu de la largeur de la fenêtre
-    destination.y =
-        (window_dimensions.h - destination.h) /
-        2;  // La destination est au milieu de la hauteur de la fenêtre
+    /* Mais pourquoi prendre la totalité de l'image, on peut n'en afficher qu'un morceau, et changer de morceau :-) */
 
-    SDL_RenderCopy(renderer, my_texture,  // Préparation de l'affichage
-                    &source, &destination);
-    SDL_RenderPresent(renderer);
-    SDL_Delay(1000);
+    int nb_images = 3;                     // nombre d'image par ligne
+    int nb_ligne = 4;
+    float zoom = 1.5;                        // zoom, car ces images sont un peu petites
+    int offset_x = source.w / nb_images,   // La largeur d'une vignette de l'image, marche car la planche est bien réglée
+        offset_y = source.h / nb_ligne;           // La hauteur d'une vignette de l'image, marche car la planche est bien réglée
 
-    SDL_RenderClear(renderer);  // Effacer la fenêtre
+
+    state.x = 0 ;                          // La première vignette est en début de ligne
+    state.y = 1 * offset_y;                // On s'intéresse à la 2ème ligne
+    state.w = offset_x;                    // Largeur de la vignette
+    state.h = offset_y;                    // Hauteur de la vignette
+
+    destination.w = offset_x * zoom;       // Largeur du sprite à l'écran
+    destination.h = offset_y * zoom;       // Hauteur du sprite à l'écran
+
+    
+    destination.y =  posY;                      // La course se fait en bas d'écran (en vertical)
+
+    destination.x = posX;
+    state.x = offset_x * textNb;
+    SDL_RenderCopy(renderer, my_texture, // Préparation de l'affichage
+                &state,
+                &destination);  
 }
 
 
@@ -149,10 +159,10 @@ int main() {
         sprintf(filename, "./img/winter/%d.png", i + 1);
         layers[i] = load_texture_from_image(filename, window, renderer);
     }
-
+    SDL_Texture* dragonTxt = load_texture_from_image("./img/dragon/drg.png", window, renderer);
 
     //int x1=0,x2=window_dimensions.w;
-
+    int dragonTextNb = 0, j=1;
     int x1[layersNb];  // Position de chaque couche
     int x2[layersNb];  // Position de chaque couche
     float speed[layersNb] = {5, 4, 3, 2, 1};  // Vitesse de fond -> avant-plan
@@ -161,7 +171,8 @@ int main() {
         x1[i] = 0;
         x2[i] = window_dimensions.w;
     }
-    while (1) {
+    
+    while (j<=700) {
         
 
         
@@ -174,20 +185,24 @@ int main() {
             if(x1[i] < -window_dimensions.w) x1[i] += 2 * window_dimensions.w;
             if(x2[i] < -window_dimensions.w) x2[i] += 2 * window_dimensions.w;
         }
+        CreateDragon(dragonTxt, window, renderer, window_dimensions.w/4, window_dimensions.h*2/8,dragonTextNb%3);
+        if (j%10==0) dragonTextNb++; //vitesse de changement des sprites du dragon
         SDL_RenderPresent(renderer);
-    
+        j++;
         SDL_Delay(16); 
     }
     
-    /*SDL_RenderClear(renderer);           // Effacer l'image précédente avant de dessiner la nouvelle
-    ShowMovingLayer(bg, window_dimensions, renderer);
-    SDL_RenderPresent(renderer); 
-    SDL_Delay(200); */
+    
+
 
 
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
-    //SDL_DestroyTexture(bg);
+    for (int i = 0; i < layersNb; i++) {
+        SDL_DestroyTexture(layers[i]);
+    }
+    SDL_DestroyTexture(dragonTxt);
+    IMG_Quit();
     SDL_Quit();
 
     return 0;
