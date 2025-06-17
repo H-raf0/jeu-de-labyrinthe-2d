@@ -6,190 +6,145 @@
 
 #define SCREEN_WIDTH 1920
 #define SCREEN_HEIGHT 1080
-#define layersNb 5
+#define LAYERS_NB 5
 
-void end_sdl(char ok,                                               // fin normale : ok = 0 ; anormale ok = 1
-    char const* msg,                                       // message à afficher
-    SDL_Window* window,                                    // fenêtre à fermer
-    SDL_Renderer* renderer) {                              // renderer à fermer
-    char msg_formated[255];                                            
-    int l;                                                     
-                                            
-    if (!ok) {                                                        // Affichage de ce qui ne va pas
-        strncpy(msg_formated, msg, 250);                                         
-        l = strlen(msg_formated);                                            
-        strcpy(msg_formated + l, " : %s\n");                                     
-                                            
-        SDL_Log(msg_formated, SDL_GetError());                                   
-    }                                                          
-                                            
-    if (renderer != NULL) {                                           // Destruction si nécessaire du renderer
-        SDL_DestroyRenderer(renderer);                                  // Attention : on suppose que les NULL sont maintenus !!
-        renderer = NULL;
+// Fonction pour gérer proprement la fin du programme
+void end_sdl(char ok, const char* msg, SDL_Window* window, SDL_Renderer* renderer) {
+    if (!ok) {
+        SDL_Log("%s : %s\n", msg, SDL_GetError());
     }
-    if (window != NULL)   {                                           // Destruction si nécessaire de la fenêtre
-        SDL_DestroyWindow(window);                                      // Attention : on suppose que les NULL sont maintenus !!
-        window= NULL;
-    }
-                                            
-    SDL_Quit();                                                    
-                                            
-    if (!ok) {                                       // On quitte si cela ne va pas            
-        exit(EXIT_FAILURE);                                     
-    }                                                          
-}  
 
+    if (renderer != NULL) SDL_DestroyRenderer(renderer);
+    if (window != NULL) SDL_DestroyWindow(window);
 
-
-SDL_Texture* load_texture_from_image(char  *  file_image_name, SDL_Window *window, SDL_Renderer *renderer ){
-    SDL_Surface *my_image = NULL;           // Variable de passage
-    SDL_Texture* my_texture = NULL;         // La texture
-
-    my_image = IMG_Load(file_image_name);   // Chargement de l'image dans la surface
-                                            // image=SDL_LoadBMP(file_image_name); fonction standard de la SDL, 
-                                            // uniquement possible si l'image est au format bmp */
-    if (my_image == NULL) end_sdl(0, "Chargement de l'image impossible", window, renderer);
-   
-    my_texture = SDL_CreateTextureFromSurface(renderer, my_image); // Chargement de l'image de la surface vers la texture
-    SDL_FreeSurface(my_image);                                     // la SDL_Surface ne sert que comme élément transitoire 
-    if (my_texture == NULL) end_sdl(0, "Echec de la transformation de la surface en texture", window, renderer);
-
-    return my_texture;
+    SDL_Quit();
+    if (!ok) exit(EXIT_FAILURE);
 }
 
+// Charge une texture à partir d'un fichier image
+SDL_Texture* load_texture_from_image(char* file_image_name, SDL_Window* window, SDL_Renderer* renderer) {
+    SDL_Surface* surface = IMG_Load(file_image_name);
+    if (surface == NULL) end_sdl(0, "Erreur chargement image", window, renderer);
 
-void ShowMovingLayer(SDL_Texture *my_texture, SDL_Rect window_dimensions, SDL_Renderer *renderer, int x) {
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_FreeSurface(surface);
+    if (texture == NULL) end_sdl(0, "Erreur création texture", window, renderer);
 
-    SDL_Rect 
-        source = {0},                         // Rectangle définissant la zone de la texture à récupérer
-        destination = {0};                    // Rectangle définissant où la zone_source doit être déposée dans le renderer
-
-    SDL_QueryTexture(my_texture, NULL, NULL,
-             &source.w, &source.h);       // Récupération des dimensions de l'image
-
-
-    destination = window_dimensions;              // On fixe les dimensions de l'affichage à  celles de la fenêtre
-    destination.x = x;  
-    destination.y = (window_dimensions.h - destination.h) / 2;  // La destination est au milieu de la hauteur de la fenêtre
-
-
-    SDL_RenderCopy(renderer, my_texture,&source,&destination);                 // Création de l'élément à afficher
+    return texture;
 }
 
-void play_with_texture_2(SDL_Texture* my_texture, SDL_Window* window,
-                         SDL_Renderer* renderer) {
-    SDL_Rect source =
-                {0},  // Rectangle définissant la zone de la texture à récupérer
-        window_dimensions = {0},  // Rectangle définissant la fenêtre, on
-                                    // n'utilisera que largeur et hauteur
-        destination = {0};  // Rectangle définissant où la zone_source doit être
-                            // déposée dans le renderer
+// Affiche une couche de fond avec décalage horizontal
+void ShowLayer(SDL_Texture* texture, SDL_Rect window_dim, SDL_Renderer* renderer, int x, int y) {
+    SDL_Rect src = {0}, dst = {0};
+    SDL_QueryTexture(texture, NULL, NULL, &src.w, &src.h);
 
-    SDL_GetWindowSize(
-        window, &window_dimensions.w,
-        &window_dimensions.h);  // Récupération des dimensions de la fenêtre
-    SDL_QueryTexture(my_texture, NULL, NULL, &source.w,
-                    &source.h);  // Récupération des dimensions de l'image
+    dst = window_dim;
+    dst.x = x;
+    dst.y = y;
 
-    float zoom = 1.5;                 // Facteur de zoom à appliquer
-    destination.w = source.w * zoom;  // La destination est un zoom de la source
-    destination.h = source.h * zoom;  // La destination est un zoom de la source
-    destination.x =
-        (window_dimensions.w - destination.w) /
-        2;  // La destination est au milieu de la largeur de la fenêtre
-    destination.y =
-        (window_dimensions.h - destination.h) /
-        2;  // La destination est au milieu de la hauteur de la fenêtre
-
-    SDL_RenderCopy(renderer, my_texture,  // Préparation de l'affichage
-                    &source, &destination);
-    SDL_RenderPresent(renderer);
-    SDL_Delay(1000);
-
-    SDL_RenderClear(renderer);  // Effacer la fenêtre
+    SDL_RenderCopy(renderer, texture, &src, &dst);
 }
 
+// Affiche une vignette du sprite du dragon
+void CreateDragon(SDL_Texture* texture, SDL_Window* window, SDL_Renderer* renderer, int posX, int posY, int frameIndex) {
+    SDL_Rect src = {0}, dst = {0}, win_dim = {0};
+
+    SDL_GetWindowSize(window, &win_dim.w, &win_dim.h);
+    SDL_QueryTexture(texture, NULL, NULL, &src.w, &src.h);
+
+    int columns = 3, rows = 4;
+    float zoom = 1.5f;
+    int frameW = src.w / columns;
+    int frameH = src.h / rows;
+
+    src.x = frameIndex * frameW; // colonne (frameIndex+1)
+    src.y = 1 * frameH;  // Ligne 2
+    src.w = frameW;
+    src.h = frameH;
+
+    dst.w = frameW * zoom;
+    dst.h = frameH * zoom;
+    dst.x = posX;
+    dst.y = posY;
+
+    SDL_RenderCopy(renderer, texture, &src, &dst);
+}
 
 int main() {
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-        SDL_Log("Error : SDL initialisation - %s\n", SDL_GetError());              
+        SDL_Log("Erreur initialisation SDL : %s\n", SDL_GetError());
         exit(EXIT_FAILURE);
     }
 
-    SDL_Window* window = SDL_CreateWindow("Sprites",SDL_WINDOWPOS_UNDEFINED,SDL_WINDOWPOS_UNDEFINED,SCREEN_WIDTH, SCREEN_HEIGHT,SDL_WINDOW_RESIZABLE);
-    if (window == NULL) {
-        SDL_Log("Error : Window creation - %s\n", SDL_GetError());
-        SDL_Quit();
-        return 1;
-    }
+    SDL_Window* window = SDL_CreateWindow("Parallaxe & Dragon", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+                                          SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE);
+    if (!window) end_sdl(0, "Erreur création fenêtre", NULL, NULL);
 
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-    if (renderer == NULL) {
-        SDL_Log("Error : Renderer creation - %s\n", SDL_GetError());
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-        return 1;
-    }
+    if (!renderer) end_sdl(0, "Erreur création renderer", window, NULL);
 
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    
-    // ici le code d'animation
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);  // fond noir
 
     SDL_Rect window_dimensions = {0};
+    SDL_GetWindowSize(window, &window_dimensions.w, &window_dimensions.h);
 
-    SDL_GetWindowSize(window,              // Récupération des dimensions de la fenêtre
-            &window_dimensions.w,
-            &window_dimensions.h);
-
-    //load layer
-    SDL_Texture* layers[layersNb];
-
-    for (int i = 0; i < layersNb; i++) {
+    // Chargement des couches de fond
+    SDL_Texture* layers[LAYERS_NB];
+    for (int i = 0; i < LAYERS_NB; i++) {
         char filename[100];
         sprintf(filename, "./img/winter/%d.png", i + 1);
         layers[i] = load_texture_from_image(filename, window, renderer);
     }
 
-    float x[layersNb];  // Position de chaque couche
-    float speed[layersNb] = {0.2, 0.4, 0.7, 1.0, 1.5};  // Vitesse de fond -> avant-plan
+    // Chargement du sprite du dragon
+    SDL_Texture* dragonTex = load_texture_from_image("./img/dragon/drg.png", window, renderer);
 
-    for (int i = 0; i < layersNb; i++) {
-        x[i] = 0;
+    int dragonFrame = 0, frameCount = 0;
+    int x1[LAYERS_NB], x2[LAYERS_NB];
+    float speeds[LAYERS_NB] = {5, 4, 3, 2, 1};  // vitesse de mouvement des couches De l'avant vers l’arriere
+
+    // Initialisation des positions des couches
+    for (int i = 0; i < LAYERS_NB; i++) {
+        x1[i] = 0;
+        x2[i] = window_dimensions.w;
     }
 
-
-    int x1=0,x2=window_dimensions.w;
-    
-    while (1) {
+    // Boucle principale
+    while (frameCount <= 700) {
         SDL_RenderClear(renderer);
 
-        for (int i = 0; i < layersNb; i++) {
-            // Affiche chaque couche deux fois pour créer un effet de scrolling infini
-            ShowMovingLayer(layers[i], window_dimensions, renderer, (int)x[i]);
-            ShowMovingLayer(layers[i], window_dimensions, renderer, (int)(x[i] + window_dimensions.w));
+        // Affichage des couches de fond (parallaxe)
+        for (int i = LAYERS_NB - 1; i >= 0; i--) {
+            ShowLayer(layers[i], window_dimensions, renderer, x1[i], 0);
+            ShowLayer(layers[i], window_dimensions, renderer, x2[i], 0);
 
-            // Mise à jour de la position avec la vitesse
-            x[i] -= speed[i];
+            x1[i] -= speeds[i];
+            x2[i] -= speeds[i];
 
-            // Reboucle quand la première image sort de l'écran
-            if (x[i] <= -window_dimensions.w)
-                x[i] += window_dimensions.w;
+            if (x1[i] < -window_dimensions.w) x1[i] += 2 * window_dimensions.w;
+            if (x2[i] < -window_dimensions.w) x2[i] += 2 * window_dimensions.w;
         }
 
+        // Affichage du dragon
+        CreateDragon(dragonTex, window, renderer, window_dimensions.w / 4, window_dimensions.h * 2 / 8, dragonFrame % 3);
+
+        // Changement de sprite toutes les 10 frames
+        if (frameCount % 10 == 0) dragonFrame++;
+
         SDL_RenderPresent(renderer);
-        SDL_Delay(16);  // ~60 FPS
+        SDL_Delay(16);  // Environ 60 FPS
+        frameCount++;
     }
 
-    
-    /*SDL_RenderClear(renderer);           // Effacer l'image précédente avant de dessiner la nouvelle
-    ShowMovingLayer(bg, window_dimensions, renderer);
-    SDL_RenderPresent(renderer); 
-    SDL_Delay(200); */
-
-
+    // Libération des ressources
+    for (int i = 0; i < LAYERS_NB; i++) {
+        SDL_DestroyTexture(layers[i]);
+    }
+    SDL_DestroyTexture(dragonTex);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
-    //SDL_DestroyTexture(bg);
+
+    IMG_Quit();
     SDL_Quit();
 
     return 0;
