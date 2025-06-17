@@ -56,16 +56,16 @@ int main(int argc, char* argv[]) {
     SDL_Event e;
 
     while (!quit) {
-        // Gestion des événements
+        // Gestion des evenements
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT)
                 quit = true;
         }
 
-        // Mise à jour de la position du soleil
+        // Mise a jour de la position du soleil
         sun_x += SUN_SPEED;
         if (sun_x - SUN_RADIUS > WIDTH) {
-            sun_x = -SUN_RADIUS; // Recommence à gauche
+            sun_x = -SUN_RADIUS; // Recommence a gauche
         }
 
         ray_angle += 0.01f;
@@ -80,7 +80,7 @@ int main(int argc, char* argv[]) {
         // Affichage
         SDL_RenderPresent(renderer);
 
-        SDL_Delay(16); // ~60 FPS
+        SDL_Delay(16); 
     }
 
     SDL_DestroyRenderer(renderer);

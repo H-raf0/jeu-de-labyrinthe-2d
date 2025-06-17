@@ -18,10 +18,10 @@
 
 void Init_SDL()
 {
-    /* Initialisation de la SDL  + gestion de l'échec possible */
+    /* Initialisation de la SDL  + gestion de l'echec possible */
     if(SDL_Init(SDL_INIT_VIDEO)!=0)
     {
-        // l'initialisation de la SDL a échoué
+        // l'initialisation de la SDL a echoue
         SDL_Log("Error : SDL initialisation - %s\n",SDL_GetError());
         exit(EXIT_FAILURE);
     }
@@ -33,7 +33,7 @@ SDL_Window * Create_Window (int posX, int posY, int length, int height, SDL_Rend
     if (window == NULL)
     {
         SDL_Log("Error : SDL window creation - %s\n", 
-                    SDL_GetError());                 // échec de la création de la fenêtre
+                    SDL_GetError());                 // echec de la creation de la fenetre
         SDL_Quit();                              // On referme la SDL       
         exit(EXIT_FAILURE);
     }
@@ -54,7 +54,7 @@ void random_resize(SDL_Window* window, int * x,int * y)
     *x = largeur_min + rand()%(longueur_max - largeur_min + 1);
     *y = hauteur_min + rand()%(hauteur_max - hauteur_min + 1);
 } 
-// Change la couleur de fond aléatoirement
+// Change la couleur de fond aleatoirement
 void random_color(SDL_Renderer* renderer)
 {
     int r = rand() % 256;
@@ -135,7 +135,7 @@ void free_window(SDL_Window * window, SDL_Renderer *renderer)
 int main()
 {
     Init_SDL();
-    srand((unsigned int)time(NULL)); // Initialisation du générateur aléatoire
+    srand((unsigned int)time(NULL)); // Initialisation du generateur aleatoire
     SDL_Renderer* renderer = NULL;
     SDL_Window* window = Create_Window(100, 100, 200, 200, &renderer);
     if (!window || !renderer) {
