@@ -101,7 +101,7 @@ void ShowLayer(SDL_Texture* texture, SDL_Rect window_dim, SDL_Renderer* renderer
     SDL_RenderCopy(renderer, texture, &src, &dst);
 }
 
-void CreateDragon(SDL_Texture* texture, SDL_Window* window, SDL_Renderer* renderer, int posX, int posY, int frameIndex) {
+void Createrenard(SDL_Texture* texture, SDL_Window* window, SDL_Renderer* renderer, int posX, int posY, int frameIndex) {
     SDL_Rect src = {0}, dst = {0}, win_dim = {0};
 
     SDL_GetWindowSize(window, &win_dim.w, &win_dim.h);
@@ -156,10 +156,10 @@ int main()
         layers[i] = load_texture_from_image(filename, window, renderer);
     }
 
-    // Chargement du sprite du dragon
-    SDL_Texture* dragonTex = load_texture_from_image("/home/local.isima.fr/ilnasrat/Téléchargements/fox-1.1/PNG/48x64/fox-NESW-bright.png", window, renderer);
+    // Chargement du sprite du renard
+    SDL_Texture* renard = load_texture_from_image("/home/local.isima.fr/ilnasrat/Téléchargements/fox-1.1/PNG/48x64/fox-NESW-bright.png", window, renderer);
 
-    int dragonFrame = 0, frameCount = 0;
+    int renardFrame = 0, frameCount = 0;
     int x1[5], x2[5];
     float speeds[5] = {5, 4, 3, 2, 1};  // vitesse de mouvement des couches De l'avant vers l’arriere
 
@@ -185,11 +185,11 @@ int main()
             if (x2[i] < -window_dimensions.w) x2[i] += 2 * window_dimensions.w;
         }
 
-        // Affichage du dragon
-        CreateDragon(dragonTex, window, renderer, 700, 635, dragonFrame % 3);
+        // Affichage du renard
+        Createrenard(renard, window, renderer, 700, 635, renardFrame % 3);
 
         // Changement de sprite toutes les 10 frames
-        if (frameCount % 10 == 0) dragonFrame++;
+        if (frameCount % 10 == 0) renardFrame++;
 
         SDL_RenderPresent(renderer);
         SDL_Delay(16);  // Environ 60 FPS
@@ -200,7 +200,7 @@ int main()
     for (int i = 0; i < 5; i++) {
         SDL_DestroyTexture(layers[i]);
     }
-    SDL_DestroyTexture(dragonTex);
+    SDL_DestroyTexture(renard);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
 
