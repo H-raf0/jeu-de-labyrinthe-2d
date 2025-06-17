@@ -150,36 +150,34 @@ int main() {
         layers[i] = load_texture_from_image(filename, window, renderer);
     }
 
-    float x[layersNb];  // Position de chaque couche
-    float speed[layersNb] = {0.2, 0.4, 0.7, 1.0, 1.5};  // Vitesse de fond -> avant-plan
+
+    //int x1=0,x2=window_dimensions.w;
+
+    int x1[layersNb];  // Position de chaque couche
+    int x2[layersNb];  // Position de chaque couche
+    float speed[layersNb] = {5, 4, 3, 2, 1};  // Vitesse de fond -> avant-plan
 
     for (int i = 0; i < layersNb; i++) {
-        x[i] = 0;
+        x1[i] = 0;
+        x2[i] = window_dimensions.w;
     }
-
-
-    int x1=0,x2=window_dimensions.w;
-    
     while (1) {
+        
+
+        
         SDL_RenderClear(renderer);
-
-        for (int i = 0; i < layersNb; i++) {
-            // Affiche chaque couche deux fois pour créer un effet de scrolling infini
-            ShowMovingLayer(layers[i], window_dimensions, renderer, (int)x[i]);
-            ShowMovingLayer(layers[i], window_dimensions, renderer, (int)(x[i] + window_dimensions.w));
-
-            // Mise à jour de la position avec la vitesse
-            x[i] -= speed[i];
-
-            // Reboucle quand la première image sort de l'écran
-            if (x[i] <= -window_dimensions.w)
-                x[i] += window_dimensions.w;
+        for (int i = layersNb-1; i >= 0; i--) {
+            ShowMovingLayer(layers[i], window_dimensions, renderer, (int) x1[i]);
+            ShowMovingLayer(layers[i], window_dimensions, renderer, (int) x2[i]);
+            x1[i] -= speed[i];
+            x2[i] -= speed[i];
+            if(x1[i] < -window_dimensions.w) x1[i] += 2 * window_dimensions.w;
+            if(x2[i] < -window_dimensions.w) x2[i] += 2 * window_dimensions.w;
         }
-
         SDL_RenderPresent(renderer);
-        SDL_Delay(16);  // ~60 FPS
+    
+        SDL_Delay(16); 
     }
-
     
     /*SDL_RenderClear(renderer);           // Effacer l'image précédente avant de dessiner la nouvelle
     ShowMovingLayer(bg, window_dimensions, renderer);
