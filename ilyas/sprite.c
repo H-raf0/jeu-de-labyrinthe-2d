@@ -135,6 +135,7 @@ int main()
         SDL_Log("Erreur initialisation SDL : %s\n", SDL_GetError());
         exit(EXIT_FAILURE);
     }
+    
 
     SDL_Window* window = SDL_CreateWindow("Desert et renard", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                                           SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE);
