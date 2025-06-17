@@ -1,6 +1,9 @@
 # local files
 prog
 .vscode/
+Makefile3
+prog2
+run.sh
 
 
 # Prerequisites

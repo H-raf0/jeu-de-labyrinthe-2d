@@ -91,15 +91,16 @@ void CreateSerpent(SDL_Window **windowsArray, SDL_Renderer **renderersArray, int
 
 
 
-void MoveSerpent(SDL_Window **windowsArray) {
+void MoveSerpent(SDL_Window **windowsArray, int taille) {
     int x, y, x_new=0, y_new=0, pasX = 30, pasY = 30;
-    int tabPos[N][4];
+    int tabPos[N][5];
     for (int i = 0; i < N; i++) {
         SDL_GetWindowPosition(windowsArray[i], &x, &y);
         tabPos[i][0] = x;
         tabPos[i][1] = y - 37;
         tabPos[i][2] = pasX;
         tabPos[i][3] = pasY;
+        tabPos[i][4] = taille;
     }
     for (int j = 0; j < 100; j++) {
         for (int i = 0; i < N; i++) {
@@ -112,15 +113,20 @@ void MoveSerpent(SDL_Window **windowsArray) {
             // Si la fenêtre dépasse la largeur de l'écran, changer la direction
             if (x_new >= 1830 || x_new <= 0) {  // Si x arrive à sa limite dans l ecran
                 tabPos[i][2] *= -1;
+                tabPos[i][4] -= 20;
+                SDL_SetWindowSize(windowsArray[i], tabPos[i][4], tabPos[i][4]);
             }
             // Si la fenêtre dépasse la hauteur de l'écran, changer la direction
             if (y_new >= 940 || y_new <= 0) {  // Si y arrive à sa limite dans l ecran
                 tabPos[i][3] *= -1;
+                tabPos[i][4] -= 20;
+                SDL_SetWindowSize(windowsArray[i], tabPos[i][4], tabPos[i][4]);
             }
             // Déplacer la fenêtre
             tabPos[i][0] += tabPos[i][2];
             tabPos[i][1] += tabPos[i][3];
             SDL_SetWindowPosition(windowsArray[i], tabPos[i][0], tabPos[i][1]);
+            
         }
         SDL_Delay(80); // Attendre un peu avant de déplacer à nouveau
     }
@@ -137,14 +143,15 @@ void DestroyWindow(SDL_Window *window, SDL_Renderer *renderer){
 
 int main(){
     int nbWindows = 3;
+    int taille = 100;
     Init_SDL();
     SDL_Window **windowsArray = (SDL_Window **) malloc(sizeof(SDL_Window *) * nbWindows);
     SDL_Renderer **renderersArray = (SDL_Renderer **)malloc(sizeof(SDL_Renderer *) * nbWindows);
     
     int* res = GetResolution();
     printf("%d %d\n", res[0], res[1]);  
-    CreateSerpent(windowsArray, renderersArray, 100, res[0]/2, res[1]/2);
-    MoveSerpent(windowsArray);
+    CreateSerpent(windowsArray, renderersArray, taille, res[0]/2, res[1]/2);
+    MoveSerpent(windowsArray, taille);
     SDL_Delay(1000);
 
     for(int i=nbWindows-1; i>=0; i--){
