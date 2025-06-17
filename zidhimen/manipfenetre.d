@@ -1,0 +1,1 @@
+manipfenetre.o: manipfenetre.c

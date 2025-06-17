@@ -1,5 +1,19 @@
 #include <SDL2/SDL.h>
 #include <stdio.h>
+#include <stdlib.h> 
+#include <stdbool.h>
+#include <math.h>
+#include <time.h>
+#define hauteur_min 200
+#define hauteur_max 1000
+#define largeur_min 300
+#define longueur_max 1000 
+#define PAS 5 
+#define L 1980 
+#define H 1080 
+
+
+
 
 
 void Init_SDL()
@@ -32,12 +46,65 @@ SDL_Window * Create_Window (int posX, int posY, int length, int height, SDL_Rend
         exit(EXIT_FAILURE);
     }
 
-    SDL_SetRenderDrawColor(*renderer, 0, 0, 0, 255);
-    SDL_RenderClear(*renderer);
-    SDL_RenderPresent(*renderer);
-
     return window;
 }
+
+void random_resize(SDL_Window* window, int * x,int * y)
+{
+    *x = largeur_min + rand()%(longueur_max - largeur_min + 1);
+    *y = hauteur_min + rand()%(hauteur_max - hauteur_min + 1);
+} 
+// Change la couleur de fond aléatoirement
+void random_color(SDL_Renderer* renderer)
+{
+    int r = rand() % 256;
+    int g = rand() % 256;
+    int b = rand() % 256;
+    SDL_SetRenderDrawColor(renderer, r, g, b, 255);
+    SDL_RenderClear(renderer);
+    SDL_RenderPresent(renderer);
+}
+void move_window_bouncing(SDL_Window* window, SDL_Renderer* renderer) 
+{
+    int x = 100, y = 100;
+    int dx = PAS, dy = PAS;
+    int w = 400, h = 300;
+
+    SDL_SetWindowSize(window, w, h);
+
+    bool quit = false;
+    SDL_Event e;
+
+    while (!quit) {
+        while (SDL_PollEvent(&e)) 
+        {
+            if (e.type == SDL_QUIT) quit = true;
+        }
+
+        x += dx;
+        y += dy;
+
+        bool bounced = false;
+
+        if (x <= 0 || x + w >= L) {
+            dx = -dx;
+            bounced = true;
+        }
+        if (y <= 0 || y + h >= H) {
+            dy = -dy;
+            bounced = true;
+        }
+
+        if (bounced) {
+            random_resize(window, &w, &h);
+            random_color(renderer);
+        }
+
+        SDL_SetWindowPosition(window, x, y);
+        SDL_Delay(16);
+    }
+}
+
 
 
 void free_window(SDL_Window * window, SDL_Renderer *renderer)
@@ -64,50 +131,24 @@ void free_window(SDL_Window * window, SDL_Renderer *renderer)
     SDL_Quit();
 }
 
-void CreatediagWindowsdim(SDL_Window ** windowsArray, SDL_Renderer ** renderersArray, int a , int b, int N )
-{
-    for (int i=0;i<N;i++)
-    {
-        //redimensionner x et y avec le height et largeur
-        windowsArray[i] = Create_Window(a,b,100+4*i,100+4*i,&renderersArray[i]);
-        printf("a= %d , b= %d \n", a , b);
-        a+=80;
-        b+=40;
-        SDL_Delay(100);
-    }
-
-}
-void Move_diag(SDL_Window ** windowsArray,int count)
-{
-    for (int i = 0; i < count; i++) {
-        int x, y;
-        SDL_GetWindowPosition(windowsArray[i], &x, &y);
-        SDL_SetWindowPosition(windowsArray[i], x + 2, y + 2);
-    }
-    SDL_Delay(100);
-}
-
-
-
 
 int main()
 {
-    int M=15;
-    int N=25;
-    int count = 2;
-    SDL_Window **windowsArray = (SDL_Window **) malloc(sizeof(SDL_Window *) * N);
-    SDL_Renderer **renderersArray = (SDL_Renderer **)malloc(sizeof(SDL_Renderer *) * N);
     Init_SDL();
-    CreatediagWindowsdim(windowsArray,renderersArray,2,2,N);
-    
-     for(int i=0;i<M;i++)
-     {
-         free_window(windowsArray[i],renderersArray[i]);
+    srand((unsigned int)time(NULL)); // Initialisation du générateur aléatoire
+    SDL_Renderer* renderer = NULL;
+    SDL_Window* window = Create_Window(100, 100, 200, 200, &renderer);
+    if (!window || !renderer) {
+        SDL_Quit();
+        return 1;
     }
-     free(windowsArray);
-     free(renderersArray);
-    
 
-     SDL_Quit();                                // quitter la SDL
+    random_color(renderer); // couleur initiale
+
+    move_window_bouncing(window, renderer);
+
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
     return 0;
 }
