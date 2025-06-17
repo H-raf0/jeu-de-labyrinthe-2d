@@ -109,8 +109,22 @@ int main() {
         x2[i] = window_dimensions.w;
     }
 
+    int running = 1;
+    SDL_Event event;
     // Boucle principale
-    while (frameCount <= 700) {
+    while (running && frameCount <= 1000) {
+
+        // Gestion des événements clavier
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_QUIT)
+                running = 0;
+            else if (event.type == SDL_KEYDOWN) {
+                if (event.key.keysym.sym == SDLK_ESCAPE)
+                    running = 0;
+            }
+        }
+
+
         SDL_RenderClear(renderer);
 
         // Affichage des couches de fond (parallaxe)
