@@ -3,129 +3,109 @@
 #include <stdio.h>
 #include <string.h>
 
+// Fonction de terminaison propre
+void end_sdl(char ok, const char* msg, SDL_Window* window, SDL_Renderer* renderer) {
+    char msg_formated[255];
+    int l;
 
-void end_sdl(char ok,                                               // fin normale : ok = 0 ; anormale ok = 1
-	char const* msg,                                       // message à afficher
-	SDL_Window* window,                                    // fenêtre à fermer
-	SDL_Renderer* renderer) {                              // renderer à fermer
-	
-	char msg_formated[255];                                            
-	int l;                                                     
-										
-	if (!ok) {                                                        // Affichage de ce qui ne va pas
-	
-		strncpy(msg_formated, msg, 250);                                         
-		l = strlen(msg_formated);                                            
-		strcpy(msg_formated + l, " : %s\n");                                     
-											
-		SDL_Log(msg_formated, SDL_GetError());                                   
-	}                                                          
-										
-	if (renderer != NULL) {                                           // Destruction si nécessaire du renderer
+    if (!ok) {
+        strncpy(msg_formated, msg, 250);
+        l = strlen(msg_formated);
+        strcpy(msg_formated + l, " : %s\n");
+        SDL_Log(msg_formated, SDL_GetError());
+    }
 
-		SDL_DestroyRenderer(renderer);                                  // Attention : on suppose que les NULL sont maintenus !!
-		renderer = NULL;
-	}
-	if (window != NULL)   {                                           // Destruction si nécessaire de la fenêtre
+    if (renderer != NULL) SDL_DestroyRenderer(renderer);
+    if (window != NULL) SDL_DestroyWindow(window);
+    SDL_Quit();
 
-		SDL_DestroyWindow(window);                                      // Attention : on suppose que les NULL sont maintenus !!
-		window= NULL;
-	}
-										
-	SDL_Quit();                                                    
-										
-	if (!ok) {                                       // On quitte si cela ne va pas  
-
-		exit(EXIT_FAILURE);                                                  
-	}                                                          
-}                                                        
-
-void drawCercle(SDL_Renderer* renderer, int x, int y, int diametre){
-
-	for (float angle = 0; angle < 2 * M_PI; angle += M_PI / 4000) {  
-
-		SDL_RenderDrawPoint(renderer,                  
-					x + diametre * cos(angle),                     // coordonnée en x
-					y + diametre * sin(angle));                    //            en y   
-		
-	}
-	
+    if (!ok) exit(EXIT_FAILURE);
 }
 
-void drawLinkedCercles(SDL_Renderer* renderer, int x, int y, int diametre){
-
-	static int angle = 0;
-	int nbCercle = 16;
-
-	SDL_SetRenderDrawColor(renderer,
-				255,               // quantité de Rouge      
-				255,               //          de vert 
-				255,               //          de bleu
-				255);                                    // opacité = opaque
-
-	for(int i=0; i<nbCercle; i++){
-
-		drawCercle(renderer, x+diametre*2*cos(angle+(M_PI/nbCercle)*2*i), y + diametre*2*sin(angle+(M_PI/nbCercle)*2*i), diametre);
-	}
-	angle += 6; //vitesse de rotation
-
+// Dessine un cercle avec des points
+void drawCercle(SDL_Renderer* renderer, int x, int y, int diametre) {
+    for (float angle = 0; angle < 2 * M_PI; angle += M_PI / 4000) {
+        SDL_RenderDrawPoint(renderer,
+                            x + diametre * cos(angle),
+                            y + diametre * sin(angle));
+    }
 }
 
+// Dessine plusieurs cercles autour d’un point
+void drawLinkedCercles(SDL_Renderer* renderer, int x, int y, int diametre, int nbCercle) {
+    static int angle = 0;
+
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // Couleur blanche
+    for (int i = 0; i < nbCercle; i++) {
+        float offsetAngle = angle + (2 * M_PI / nbCercle) * i;
+        drawCercle(renderer,
+                   x + diametre * 2 * cos(offsetAngle),
+                   y + diametre * 2 * sin(offsetAngle),
+                   diametre);
+    }
+
+    angle += 6;  // Vitesse de rotation
+}
 
 int main(int argc, char** argv) {
-	(void)argc;
-	(void)argv;
+    (void)argc;
+    (void)argv;
 
-	SDL_Window* window = NULL;
-	SDL_Renderer* renderer = NULL;
+    SDL_Window* window = NULL;
+    SDL_Renderer* renderer = NULL;
+    SDL_DisplayMode screen;
 
-	SDL_DisplayMode screen;
+    if (SDL_Init(SDL_INIT_VIDEO) != 0) end_sdl(0, "ERROR SDL INIT", window, renderer);
+    SDL_GetCurrentDisplayMode(0, &screen);
+    printf("Résolution écran\n\tw : %d\n\th : %d\n", screen.w, screen.h);
 
-	/*********************************************************************************************************************/  
-	/*                         Initialisation de la SDL  + gestion de l'échec possible                                   */
-	if (SDL_Init(SDL_INIT_VIDEO) != 0) end_sdl(0, "ERROR SDL INIT", window, renderer);
+    window = SDL_CreateWindow("Cercles interactifs",
+                              SDL_WINDOWPOS_CENTERED,
+                              SDL_WINDOWPOS_CENTERED,
+                              screen.w, screen.h,
+                              SDL_WINDOW_SHOWN);
+    if (window == NULL) end_sdl(0, "ERROR WINDOW CREATION", window, renderer);
 
-	SDL_GetCurrentDisplayMode(0, &screen);
-	printf("Résolution écran\n\tw : %d\n\th : %d\n",
-		screen.w, screen.h);
+    renderer = SDL_CreateRenderer(window, -1,
+                                  SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    if (renderer == NULL) end_sdl(0, "ERROR RENDERER CREATION", window, renderer);
 
-	/* Création de la fenêtre */
-	window = SDL_CreateWindow("Premier dessin",
-				SDL_WINDOWPOS_CENTERED,
-				SDL_WINDOWPOS_CENTERED, screen.w * 1,
-				screen.h * 1,
-				SDL_WINDOW_OPENGL);
-	if (window == NULL) end_sdl(0, "ERROR WINDOW CREATION", window, renderer);
+    // Animation principale
+    double t, x, y;
+    int N = 300,i =0;
+    int running = 1;
+    int nbCercles = 16;
 
-	/* Création du renderer */
-	renderer = SDL_CreateRenderer(window, -1,
-					SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-	if (renderer == NULL) end_sdl(0, "ERROR RENDERER CREATION", window, renderer);
+    SDL_Event event;
 
-	/*********************************************************************************************************************/
-	/*                                     On dessine dans le renderer                                                   */
-	/*********************************************************************************************************************/
+    while (running) {
+        // Gestion des événements clavier
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_QUIT)
+                running = 0;
+            else if (event.type == SDL_KEYDOWN) {
+                if (event.key.keysym.sym == SDLK_ESCAPE)
+                    running = 0;
+                else if (event.key.keysym.sym == SDLK_SPACE)
+                    nbCercles = (nbCercles == 16) ? 32 : 16;  // Toggle entre 16 et 32 cercles
+            }
+        }
 
-	double t, x, y;
-	int N = 300;
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderClear(renderer);
 
-	
-	for(int i = 0; i <= N; ++i){
-
-		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);  
-		SDL_RenderClear(renderer);
-
-		t = 2 * M_PI * i / N;
-        x = (float)screen.w /2 + 500 * pow(cos(t), 3);
-        y = (float)screen.h /2 + 500 * pow(sin(t), 3);
-
-		drawLinkedCercles(renderer, x, y,40);
+        t = 2 * M_PI * i / N;
+        x = screen.w / 2 + 500 * pow(cos(t), 3);
+        y = screen.h / 2 + 500 * pow(sin(t), 3);
+		i++;
 		
-		SDL_RenderPresent(renderer);
-		SDL_Delay(5);
-	}												
+        drawLinkedCercles(renderer, x, y, 40, nbCercles);
 
-	/* on referme proprement la SDL */
-	end_sdl(1, "Normal ending", window, renderer);
-	return EXIT_SUCCESS;
+        SDL_RenderPresent(renderer);
+        SDL_Delay(10);
+		
+    }
+
+    end_sdl(1, "Normal ending", window, renderer);
+    return EXIT_SUCCESS;
 }
