@@ -10,17 +10,17 @@ LDFLAGS:=-fsanitize=address,undefined -lSDL2_image -lSDL2_ttf -lSDL2_gfx -lm -lS
 # Specify the source files
 PROG_SOURCES = manipfenetre.c
 PROG2_SOURCES = rendu.c
-#SPRITE_SOURCES = sprite.c
+SPRITE_SOURCES = sprite.c
 
 # Define the object files (replace .c with .o)
 PROG_OBJECTS = $(PROG_SOURCES:.c=.o)
 PROG2_OBJECTS = $(PROG2_SOURCES:.c=.o)
-#SPRITE_OBJECTS = $(SPRITE_SOURCES:.c=.o)
+SPRITE_OBJECTS = $(SPRITE_SOURCES:.c=.o)
 
 # Define the final executable names
 PROG_EXECUTABLE = manipfenetre
 PROG2_EXECUTABLE = rendu
-#SPRITE_EXECUTABLE = sprite
+SPRITE_EXECUTABLE = sprite
 
 # Default target
 all: $(PROG_EXECUTABLE) $(PROG2_EXECUTABLE) $(SPRITE_EXECUTABLE)
