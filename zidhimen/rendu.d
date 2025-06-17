@@ -1,0 +1,1 @@
+rendu.o: rendu.c

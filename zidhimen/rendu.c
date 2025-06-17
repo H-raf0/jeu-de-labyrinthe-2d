@@ -36,7 +36,7 @@ void draw_flower(SDL_Renderer *renderer, float cx, float cy, float petal_radius,
         draw_circle(renderer, px, py, petal_radius);
     }
 
-    // Cœur de la fleur
+    // Cœur de la fleur.
     SDL_SetRenderDrawColor(renderer, 255, 255, 0, 255); // Jaune
     draw_circle(renderer, cx, cy, petal_radius * 0.8f);
 }
