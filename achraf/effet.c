@@ -1,5 +1,6 @@
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 
 typedef struct {
@@ -83,7 +84,7 @@ int** applique_zoom(int** originale, int org_w, int org_h, float alpha, Complex 
 
 int main() {
     int w=10,h=10;
-    float alpha = 0.8;
+    float alpha = 0.5;
     Complex z_0 = {0,0};
     int** img_org = createImage(w, h);
     loadImage(img_org, w, h);
