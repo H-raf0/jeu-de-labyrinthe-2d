@@ -20,16 +20,15 @@ Complex coordonnee_image_vers_complexe(int x, int y) {
 }
 
 void complexe_vers_coordonnee_image(Complex z, int* x, int* y) {
-    *x = z.re;
-    *y = z.im;
+    *x = (int) round(z.re);
+    *y = (int) round(z.im);
 }
 
-int** createImage(int w, int h){
-    int ** img = (int**) malloc(sizeof(int*)*h);
-    for(int i = 0; i<h; i++){
-        img[i] = (int*) malloc(sizeof(int)*w);
+int** createImage(int w, int h) {
+    int** img = (int**) malloc(sizeof(int*) * w);
+    for (int i = 0; i < w; i++) {
+        img[i] = (int*) malloc(sizeof(int) * h);
     }
-
     return img;
 }
 
@@ -51,9 +50,8 @@ void afficheImage(int** img, int w, int h){
     }
 }
 
-void free2D(int **tab, int h){
-
-    for(int i = 0; i<h; i++){
+void free2D(int **tab, int w) {
+    for (int i = 0; i < w; i++) {
         free(tab[i]);
     }
 }
@@ -74,7 +72,7 @@ int** applique_zoom(int** originale, int org_w, int org_h, float alpha, Complex 
             zp = coordonnee_image_vers_complexe(i, j);
             z = zoom_inverse(zp, z_0, alpha);
             complexe_vers_coordonnee_image(z, &x, &y);
-            if (x >= 0 && x < des_h && y >= 0 && y < des_w){
+            if (x >= 0 && x < org_w && y >= 0 && y < org_h){
                 couleur = originale[x][y];
             }else{
                 couleur = couleur_par_defaut;
@@ -86,20 +84,25 @@ int** applique_zoom(int** originale, int org_w, int org_h, float alpha, Complex 
 }
 
 
+
 int main() {
     int w=10,h=10;
+    float alpha = 0.8;
     Complex z_0 = {0,0};
     int** img_org = createImage(w, h);
     loadImage(img_org, w, h);
-    int** img_des = applique_zoom(img_org, w, h, 2.0, z_0, -1);
+
+    int** img_des = applique_zoom(img_org, w, h, alpha, z_0, -1);
 
     afficheImage(img_org, w, h);
     printf("\n\n\n\n");
-    afficheImage(img_des, w*2, h*2);
+    afficheImage(img_des, (int) w*alpha, (int) h*alpha);
 
-    free2D(img_org, h);
+
+
+    free2D(img_org, w);
     free(img_org);
-    free2D(img_des, h*2);
+    free2D(img_des, w*alpha);
     free(img_des);
 
     return 0;
