@@ -1,11 +1,7 @@
+#include "effetSDL.h"
 #include <math.h>
 #include <stdio.h>
-#include <stdlib.h>
 
-
-typedef struct {
-    float re, im;
-} Complex;
 
 
 Complex coordonnee_image_vers_complexe(int x, int y) {
@@ -53,19 +49,14 @@ void free2D(int **tab, int w) {
     }
 }
 
-Complex zoom_inverse(Complex z_prime, Complex z_0, float a) {
-    Complex z = {((z_prime.re - z_0.re) / a) + z_0.re, ((z_prime.im - z_0.im) / a) + z_0.im};
-    return z;
-}
+
 
 int** applique_zoom(int** originale, int org_w, int org_h, float alpha, Complex z_0, int couleur_par_defaut){
     Complex zp, z;
     int x,y,couleur;
-    int des_w = (int) org_w*alpha;
-    int des_h = (int) org_h*alpha;
-    int** destination = createImage(des_w, des_h);
-    for(int j = 0; j<des_h; j++){
-        for(int i = 0; i<des_w; i++){
+    int** destination = createImage(org_w, org_h);
+    for(int j = 0; j<org_h; j++){
+        for(int i = 0; i<org_w; i++){
             zp = coordonnee_image_vers_complexe(i, j);
             z = zoom_inverse(zp, z_0, alpha);
             complexe_vers_coordonnee_image(z, &x, &y);
@@ -82,7 +73,9 @@ int** applique_zoom(int** originale, int org_w, int org_h, float alpha, Complex 
 
 
 
+
 int main() {
+    /* example utilisation zoom sur le terminal */
     int w=10,h=10;
     float alpha = 0.5;
     Complex z_0 = {0,0};
@@ -93,14 +86,13 @@ int main() {
 
     afficheImage(img_org, w, h);
     printf("\n\n\n\n");
-    afficheImage(img_des, (int) w*alpha, (int) h*alpha);
-
-
+    afficheImage(img_des, (int) w, (int) h);
 
     free2D(img_org, w);
     free(img_org);
-    free2D(img_des, w*alpha);
+    free2D(img_des, w);
     free(img_des);
-
+    /* fin exemple */
     return 0;
 }
+
