@@ -1,5 +1,5 @@
-#ifndef SPRITESDL_H
-#define SPRITESDL_H
+#ifndef BSDL_H
+#define BSDL_H
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
@@ -15,6 +15,7 @@ void CreateDragon(SDL_Texture* texture, SDL_Window* window, SDL_Renderer* render
 void InitialisationSDL(SDL_Window** window, SDL_Renderer** renderer, SDL_Rect* window_dimensions);
 SDL_Texture** chargerCouche(SDL_Window* window, SDL_Renderer* renderer);
 SDL_Texture* chargerDragon(SDL_Window* window, SDL_Renderer* renderer);
-void destroyAndQuit(SDL_Texture** layers, SDL_Texture** dragonTex, SDL_Window** window, SDL_Renderer** renderer);
+void destroyLayersAndDragon(SDL_Texture** layers, SDL_Texture** dragonTex);
+void destroyAndQuit(SDL_Window** window, SDL_Renderer** renderer);
 
 #endif
