@@ -131,11 +131,16 @@ void Createrenard(SDL_Texture* texture, SDL_Window* window, SDL_Renderer* render
 
 int main()
 {
-        if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         SDL_Log("Erreur initialisation SDL : %s\n", SDL_GetError());
         exit(EXIT_FAILURE);
     }
-    
+
+    if (IMG_Init(IMG_INIT_PNG) != IMG_INIT_PNG) {
+        SDL_Log("Erreur initialisation SDL_image : %s\n", IMG_GetError());
+        SDL_Quit();
+        exit(EXIT_FAILURE);
+    }
 
     SDL_Window* window = SDL_CreateWindow("Desert et renard", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                                           SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE);
@@ -144,37 +149,48 @@ int main()
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     if (!renderer) end_sdl(0, "Erreur création renderer", window, NULL);
 
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);  // fond noir
-
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_Rect window_dimensions = {0};
     SDL_GetWindowSize(window, &window_dimensions.w, &window_dimensions.h);
 
-    // Chargement des couches de fond
     SDL_Texture* layers[5];
     for (int i = 0; i < 5; i++) {
         char filename[100];
-        sprintf(filename, "/home/local.isima.fr/ilnasrat/Téléchargements/foret(1).png", i + 1);
+        sprintf(filename, "/home/local.isima.fr/ilnasrat/shared/projetzz1aiz/ilyas/foret(1).png", i + 1);
         layers[i] = load_texture_from_image(filename, window, renderer);
     }
 
-    // Chargement du sprite du renard
-    SDL_Texture* renard = load_texture_from_image("/home/local.isima.fr/ilnasrat/Téléchargements/fox-1.1/PNG/48x64/fox-NESW-bright.png", window, renderer);
+    SDL_Texture* renard = load_texture_from_image("/home/local.isima.fr/ilnasrat/shared/projetzz1aiz/ilyas/fox-1.1/PNG/48x64/fox-NESW-bright.png", window, renderer);
 
     int renardFrame = 0, frameCount = 0;
-    int x1[5], x2[5];
-    float speeds[5] = {5, 4, 3, 2, 1};  // vitesse de mouvement des couches De l'avant vers l’arriere
+    int renardY = 635;
+    float velocityY = 0;
+    bool isJumping = false;
+    float gravity = 1.0f;
+    float jumpStrength = -20.0f;
 
-    // Initialisation des positions des couches
+    int x1[5], x2[5];
+    float speeds[5] = {5, 4, 3, 2, 1};
+
     for (int i = 0; i < 5; i++) {
         x1[i] = 0;
         x2[i] = window_dimensions.w;
     }
 
-    // Boucle principale
-    while (frameCount <= 700) {
+    SDL_Event event;
+    bool running = true;
+
+    while (running && frameCount <= 700) {
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_QUIT) running = false;
+            else if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_SPACE && !isJumping) {
+                isJumping = true;
+                velocityY = jumpStrength;
+            }
+        }
+
         SDL_RenderClear(renderer);
 
-        // Affichage des couches de fond (parallaxe)
         for (int i = 4; i >= 0; i--) {
             ShowLayer(layers[i], window_dimensions, renderer, x1[i], 0);
             ShowLayer(layers[i], window_dimensions, renderer, x2[i], 0);
@@ -186,27 +202,35 @@ int main()
             if (x2[i] < -window_dimensions.w) x2[i] += 2 * window_dimensions.w;
         }
 
-        // Affichage du renard
-        Createrenard(renard, window, renderer, 700, 635, renardFrame % 3);
+        if (isJumping) {
+            renardY += (int)velocityY;
+            velocityY += gravity;
 
-        // Changement de sprite toutes les 10 frames
+            if (renardY >= 635) {
+                renardY = 635;
+                isJumping = false;
+            }
+        }
+
+        Createrenard(renard, window, renderer, 700, renardY, renardFrame % 3);
+
         if (frameCount % 10 == 0) renardFrame++;
 
         SDL_RenderPresent(renderer);
-        SDL_Delay(16);  // Environ 60 FPS
+        SDL_Delay(16);
         frameCount++;
     }
 
-    // Libération des ressources
     for (int i = 0; i < 5; i++) {
         SDL_DestroyTexture(layers[i]);
     }
     SDL_DestroyTexture(renard);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
-
     IMG_Quit();
     SDL_Quit();
 
     return 0;
+    
+  
 }
