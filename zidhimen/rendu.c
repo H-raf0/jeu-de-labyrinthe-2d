@@ -3,6 +3,13 @@
 #include <stdio.h>
 #include <string.h>
 
+// Définition des constantes pour les états
+#define STATE_FLOWER 0
+#define STATE_CIRCLE 1
+
+// Variable globale pour l'état actuel du dessin
+int current_state = STATE_FLOWER;
+
 void end_sdl(char ok, char const* msg, SDL_Window* window, SDL_Renderer* renderer) {
     char msg_formated[255];
     int l;
@@ -74,6 +81,10 @@ int main(int argc, char **argv) {
     while (running) {
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) running = 0;
+            if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_SPACE) {
+                // Changer l'état entre fleur et cercle normal
+                current_state = (current_state == STATE_FLOWER) ? STATE_CIRCLE : STATE_FLOWER;
+            }
         }
 
         // Effacer l'écran
@@ -92,8 +103,13 @@ int main(int argc, char **argv) {
         rotation_angle += 0.05f;
         if (rotation_angle > 2 * M_PI) rotation_angle -= 2 * M_PI;
 
-        // Dessiner la fleur
-        draw_flower(renderer, cx, cy, petal_radius, petal_count, rotation_angle);
+        // Dessiner en fonction de l'état actuel
+        if (current_state == STATE_FLOWER) {
+            draw_flower(renderer, cx, cy, petal_radius, petal_count, rotation_angle);
+        } else {
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // Blanc
+            draw_circle(renderer, cx, cy, petal_radius);
+        }
 
         // Afficher
         SDL_RenderPresent(renderer);
@@ -103,3 +119,4 @@ int main(int argc, char **argv) {
     end_sdl(1, "Fermeture normale", window, renderer);
     return EXIT_SUCCESS;
 }
+
