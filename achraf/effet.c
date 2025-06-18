@@ -1,10 +1,6 @@
-#include "bSDL.h"
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
 #include <math.h>
 #include <stdio.h>
 
-#define ZOOM_FACTOR 2.0f  // facteur a dans f(z) = a*z
 
 typedef struct {
     float re, im;
