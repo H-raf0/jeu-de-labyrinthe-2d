@@ -26,7 +26,7 @@ SDL_Surface* apply_zoom(SDL_Surface* src, float alpha, Complex z_0) {
     if (SDL_MUSTLOCK(src)) SDL_LockSurface(src); //verrouiller l'access à src
 
     int x_src, y_src;
-    Complex z_src, z_dest;
+    Complex z_dest, z_src;
     
     // création de la surface de destination
     SDL_Surface* dest = SDL_CreateRGBSurfaceWithFormat(0, src->w, src->h, 32, src->format->format);
@@ -43,12 +43,12 @@ SDL_Surface* apply_zoom(SDL_Surface* src, float alpha, Complex z_0) {
     Uint8* src_pixels = (Uint8*)src->pixels; // ensemble des pixels de src
     Uint8* dest_pixels = (Uint8*)dest->pixels; // ensemble des pixels de dest
 
-    //loop sur les cordonnées de src
-    for (int y = 0; y < src->h; y++) { 
-        for (int x = 0; x < src->w; x++) {
-            z_src = coordonnee_image_vers_complexe(x, y);
-            z_dest = zoom_inverse(z_src, z_0, alpha);
-            complexe_vers_coordonnee_image(z_dest, &x_src, &y_src);
+    //loop sur les cordonnées de dest
+    for (int y = 0; y < dest->h; y++) { 
+        for (int x = 0; x < dest->w; x++) {
+            z_dest = coordonnee_image_vers_complexe(x, y);
+            z_src = zoom_inverse(z_dest, z_0, alpha);
+            complexe_vers_coordonnee_image(z_src, &x_src, &y_src);
 
             // Calcul des positions mémoire
             Uint8* dest_p = dest_pixels + y * dest->pitch + x * dest_bpp;

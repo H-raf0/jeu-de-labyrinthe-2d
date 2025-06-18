@@ -64,17 +64,11 @@ int** applique_zoom(int** originale, int org_w, int org_h, float alpha, Complex 
 int** applique_zoom_sur_zone(int** originale, int org_w, int org_h, Complex zone_z, int zone_w, int zone_h, float alpha, Complex z_0, int couleur_par_defaut){
     Complex zp, z;
     int x,y,couleur;
-    int** destination = createImage(org_w, org_h);
-    for(int j = 0; j<org_h; j++){
-        for(int i = 0; i<org_w; i++){
-            zp = coordonnee_image_vers_complexe(i, j);
-            if(i>= zone_z.re && i <= zone_z.re+zone_w && j>= zone_z.im && j <= zone_z.im+zone_h){
-                z = zoom_inverse(zp, z_0, alpha);
-            } 
-            else{
-                z.re = zp.re;
-                z.im = zp.im;
-            }
+    int** destination = createImage(zone_w, zone_h);
+    for(int j = 0; j<zone_h; j++){
+        for(int i = 0; i<zone_w; i++){
+            zp = coordonnee_image_vers_complexe((org_w - 1 - zone_z.re)+i, (org_h - 1 - zone_z.im)+j);
+            z = zoom_inverse(zp, z_0, alpha);
             complexe_vers_coordonnee_image(z, &x, &y);
             if (x >= 0 && x < org_w && y >= 0 && y < org_h){
                 couleur = originale[x][y];
@@ -123,28 +117,41 @@ int mainSDL(){
 }
 
 int main() {
-    /*  
+     
     // example utilisation zoom sur le terminal
     int w=10,h=10;
     float alpha = 2;
-    Complex z_0 = {2.5,2.5}, zone_z = {2, 2};
+    Complex z_0 = {w/2,h/2};
     int** img_org = createImage(w, h);
     loadImage(img_org, w, h);
 
-    //int** img_des = applique_zoom(img_org, w, h, alpha, z_0, -1);
-    int** img_des = applique_zoom_sur_zone(img_org, w, h, zone_z, 3, 3, alpha, z_0, -1);
-
+    /*
+    int** img_des = applique_zoom(img_org, w, h, alpha, z_0, -1);
     afficheImage(img_org, w, h);
     printf("\n\n\n\n");
     afficheImage(img_des, (int) w, (int) h);
+    free2D(img_des, w);
+    */
 
+    Complex zone_z = {6, 6};
+    int zone_w = 4;
+    int zone_h = 4;
+    z_0.re = (zone_z.re + 1 + zone_w)/2;
+    z_0.im = (zone_z.im + 1 + zone_h)/2;
+    int** img_des = applique_zoom_sur_zone(img_org, w, h, zone_z, zone_w, zone_h, alpha, z_0, -1);
+
+    afficheImage(img_org, w, h);
+    printf("\n\n\n\n");
+    afficheImage(img_des, (int) zone_w, (int) zone_h);
+    free2D(img_des, zone_w);
+    
+    
     free2D(img_org, w);
     free(img_org);
-    free2D(img_des, w);
     free(img_des);
 
-    */
-    mainSDL();
+    
+    //mainSDL();
     
 }
 
