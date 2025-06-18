@@ -9,5 +9,8 @@ typedef struct {
 } Complex;
 
 Complex zoom_inverse(Complex z_prime, Complex z_0, float a);
+SDL_Surface* apply_zoom(SDL_Surface* src, float alpha, Complex z_0);
+void complexe_vers_coordonnee_image(Complex z, int* x, int* y);
+Complex coordonnee_image_vers_complexe(int x, int y);
 
 #endif

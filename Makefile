@@ -1,4 +1,4 @@
-SRC ?= effetmain.c effetSDL.c
+SRC ?= effetmain.c effetSDL.c bSDL.c
 EXE := exec
 
 CC := gcc
