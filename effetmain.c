@@ -126,26 +126,27 @@ int mainSDL(){
     destination = window_dimensions;
 
 
-    float alpha = 1;
-    SDL_Surface *surf = IMG_Load("img.png");
+
+    SDL_Surface *surf = IMG_Load("img2.png");
     if (!surf) {
         printf("Erreur chargement image : %s\n", IMG_GetError());
         return 0;
     }
-    Complex z_0;
+    //float alpha = 1;
+    //Complex z_0;
     // exemple de zoom totale
-    z_0.re = surf->w/2.0f;
-    z_0.im = surf->h/2.0f;  // centre
+    //z_0.re = surf->w/2.0f;
+    //z_0.im = surf->h/2.0f;  // centre
     //SDL_Surface *dest = apply_zoom(surf, alpha, z_0);
     // zoom partiel
-    SDL_Rect z_zp = {100, 100, 200, 200};
+    //SDL_Rect z_zp = {100, 100, 200, 200};
     //SDL_Surface *dest = apply_zoom_sur_zone(surf, alpha, z_zp);
     //exemple translation
-    SDL_Surface *dest = apply_trans(surf, 100, 400);
-
+    SDL_Surface *dest = apply_trans(surf, 100.0, 50.0);
     SDL_Texture *text_dest = SDL_CreateTextureFromSurface(renderer, dest); //surf to text
 
 
+    SDL_RenderClear(renderer);
     SDL_QueryTexture(text_dest, NULL, NULL, &source.w, &source.h); 
     SDL_RenderCopy(renderer, text_dest, &source, &destination);
     SDL_RenderPresent(renderer);
@@ -168,7 +169,7 @@ int main() {
     int** img_org = createImage(w, h);
     loadImage(img_org, w, h);
 
-    /*
+    / *
     // zoom ------------------
     int** img_des = applique_zoom(img_org, w, h, alpha, z_0, -1);
     afficheImage(img_org, w, h);
