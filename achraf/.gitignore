@@ -7,7 +7,8 @@ run.sh
 Paralax winter night.zip
 flying_dragon-1.1/
 sprite
-
+exec
+test.c
 
 # Prerequisites
 *.d
