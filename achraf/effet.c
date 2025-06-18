@@ -17,8 +17,8 @@ Complex coordonnee_image_vers_complexe(int x, int y) {
 }
 
 void complexe_vers_coordonnee_image(Complex z, int* x, int* y) {
-    *x = (int) round(z.re);
-    *y = (int) round(z.im);
+    *x = (int) floor(z.re);
+    *y = (int) floor(z.im);
 }
 
 int** createImage(int w, int h) {
