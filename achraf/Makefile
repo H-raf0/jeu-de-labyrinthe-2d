@@ -1,4 +1,4 @@
-SRC ?= sprite.c spriteSDL.c
+SRC ?= sprite.c bSDL.c
 EXE := exec
 
 CC := gcc

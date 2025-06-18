@@ -1,4 +1,4 @@
-#include "spriteSDL.h"
+#include "bSDL.h"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -80,8 +80,8 @@ int main() {
         SDL_Delay(20);
         frameCount++;
     }
-
-    destroyAndQuit(layers, &dragonTex, &window, &renderer); 
+    destroyLayersAndDragon(layers, &dragonTex);
+    destroyAndQuit(&window, &renderer); 
     free(layers);
     return 0;
 }

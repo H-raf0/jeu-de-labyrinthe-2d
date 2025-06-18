@@ -1,4 +1,4 @@
-#include "spriteSDL.h"
+#include "bSDL.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -101,12 +101,16 @@ SDL_Texture* chargerDragon(SDL_Window* window, SDL_Renderer* renderer){
     return load_texture_from_image("./img/dragon/drg.png", window, renderer);
 }
 
-void destroyAndQuit(SDL_Texture** layers, SDL_Texture** dragonTex, SDL_Window** window, SDL_Renderer** renderer){
+void destroyLayersAndDragon(SDL_Texture** layers, SDL_Texture** dragonTex){
+
     // Libération des ressources
     for (int i = 0; i < COUCHES_NB; i++) {
         SDL_DestroyTexture(layers[i]);
     }
     SDL_DestroyTexture(*dragonTex);
+}
+
+void destroyAndQuit(SDL_Window** window, SDL_Renderer** renderer){
     SDL_DestroyRenderer(*renderer);
     SDL_DestroyWindow(*window);
 
