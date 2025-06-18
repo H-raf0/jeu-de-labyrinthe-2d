@@ -1,5 +1,6 @@
 #include "effetSDL.h"
 #include "bSDL.h"
+#include <SDL2/SDL_rect.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -61,13 +62,18 @@ int** applique_zoom(int** originale, int org_w, int org_h, float alpha, Complex 
     return destination;
 }
 
-int** applique_zoom_sur_zone(int** originale, int org_w, int org_h, Complex zone_z, int zone_w, int zone_h, float alpha, Complex z_0, int couleur_par_defaut){
-    Complex zp, z;
+int** applique_zoom_sur_zone(int** originale, int org_w, int org_h, Complex zone_z, int zone_w, int zone_h, float alpha, int couleur_par_defaut){
+    Complex zp, z, z_0;
+
+    //centre de zoom
+    z_0.re = zone_z.re + zone_w/2.0;
+    z_0.im = zone_z.im + zone_h/2.0;
+    
     int x,y,couleur;
     int** destination = createImage(zone_w, zone_h);
     for(int j = 0; j<zone_h; j++){
         for(int i = 0; i<zone_w; i++){
-            zp = coordonnee_image_vers_complexe((org_w - 1 - zone_z.re)+i, (org_h - 1 - zone_z.im)+j);
+            zp = coordonnee_image_vers_complexe((zone_w + zone_z.re - 1)+i, (zone_h + zone_z.im - 1)+j);
             z = zoom_inverse(zp, z_0, alpha);
             complexe_vers_coordonnee_image(z, &x, &y);
             if (x >= 0 && x < org_w && y >= 0 && y < org_h){
@@ -82,6 +88,33 @@ int** applique_zoom_sur_zone(int** originale, int org_w, int org_h, Complex zone
 }
 
 
+int** applique_trans(int** originale, int org_w, int org_h, int x_t, int y_t, int couleur_par_defaut){
+    Complex zp, z;
+    int x,y,couleur;
+    int** destination = createImage(org_w, org_h);
+    for(int j = 0; j<org_h; j++){
+        for(int i = 0; i<org_w; i++){
+            zp = coordonnee_image_vers_complexe(i, j); //dest
+            z = translation_inverse(zp, x_t, y_t);
+            complexe_vers_coordonnee_image(z, &x, &y);
+            if (x >= 0 && x < org_w && y >= 0 && y < org_h){
+                couleur = originale[x][y];
+            }else{
+                couleur = couleur_par_defaut;
+                printf("%d %d\n", i, j);
+            }
+            destination[i][j] = couleur;
+        }
+    }
+    return destination;
+}
+
+
+
+
+
+
+
 int mainSDL(){
 
     SDL_Window* window;
@@ -93,13 +126,23 @@ int mainSDL(){
     destination = window_dimensions;
 
 
-    float alpha = 2;
+    float alpha = 1;
     SDL_Surface *surf = IMG_Load("img.png");
+    if (!surf) {
+        printf("Erreur chargement image : %s\n", IMG_GetError());
+        return 0;
+    }
     Complex z_0;
     // exemple de zoom totale
     z_0.re = surf->w/2.0f;
     z_0.im = surf->h/2.0f;  // centre
-    SDL_Surface *dest = apply_zoom(surf, alpha, z_0);
+    //SDL_Surface *dest = apply_zoom(surf, alpha, z_0);
+    // zoom partiel
+    SDL_Rect z_zp = {100, 100, 200, 200};
+    //SDL_Surface *dest = apply_zoom_sur_zone(surf, alpha, z_zp);
+    //exemple translation
+    SDL_Surface *dest = apply_trans(surf, 100, 400);
+
     SDL_Texture *text_dest = SDL_CreateTextureFromSurface(renderer, dest); //surf to text
 
 
@@ -117,7 +160,7 @@ int mainSDL(){
 }
 
 int main() {
-     
+    /*
     // example utilisation zoom sur le terminal
     int w=10,h=10;
     float alpha = 2;
@@ -126,32 +169,42 @@ int main() {
     loadImage(img_org, w, h);
 
     /*
+    // zoom ------------------
     int** img_des = applique_zoom(img_org, w, h, alpha, z_0, -1);
     afficheImage(img_org, w, h);
     printf("\n\n\n\n");
     afficheImage(img_des, (int) w, (int) h);
     free2D(img_des, w);
-    */
-
+    
+    // zoom paritel---------------
     Complex zone_z = {6, 6};
     int zone_w = 4;
     int zone_h = 4;
     z_0.re = (zone_z.re + 1 + zone_w)/2;
     z_0.im = (zone_z.im + 1 + zone_h)/2;
-    int** img_des = applique_zoom_sur_zone(img_org, w, h, zone_z, zone_w, zone_h, alpha, z_0, -1);
+    int** img_des = applique_zoom_sur_zone(img_org, w, h, zone_z, zone_w, zone_h, alpha, -1);
 
     afficheImage(img_org, w, h);
     printf("\n\n\n\n");
     afficheImage(img_des, (int) zone_w, (int) zone_h);
     free2D(img_des, zone_w);
-    
+    * /
+    // translate ---------------------------
+
+    int tx=2, ty=2;
+    int** img_des = applique_trans(img_org, w, h, tx, ty, -1);
+    afficheImage(img_org, w, h);
+    printf("\n\n\n\n");
+    afficheImage(img_des, (int) w, (int) h);
+    free2D(img_des, w);
+
     
     free2D(img_org, w);
     free(img_org);
     free(img_des);
-
+    */
     
-    //mainSDL();
+    mainSDL();
     
 }
 
