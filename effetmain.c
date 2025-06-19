@@ -131,7 +131,7 @@ int** applique_rotation(int** originale, int org_w, int org_h, Complex z_0, floa
 
 
 
-
+/*
 int mainSDL(){
 
     SDL_Window* window;
@@ -193,17 +193,15 @@ int mainSDL(){
 
     return 0;
 }
+*/
 
-/*
 int mainSDL(){
     // ================================les Initialisations===================================
     SDL_Window* window;
     SDL_Renderer* renderer;
     SDL_Rect window_dimensions = {0};
     InitialisationSDL(&window, &renderer, &window_dimensions);
-    SDL_Rect source = {0}, destination = {0};
     SDL_GetWindowSize(window, &window_dimensions.w, &window_dimensions.h);
-    destination = window_dimensions;
     SDL_Surface *surf = IMG_Load("img1.png");
     if (!surf) {
         printf("Erreur chargement image : %s\n", IMG_GetError());
@@ -211,15 +209,24 @@ int mainSDL(){
     }
     // ==================================      end    ========================================
 
-    float angle = 0.0f;
+    SDL_Rect src = {0, 0, surf->w, surf->h};
+    SDL_Rect dst = window_dimensions;
+
+    float angle = 0.0f, alpha =1.0f;
     float angle_max = 60.0f;
     float d0 = 200, d_max = 600, d1 = 1000;
-    float angle_step = 1.0f; // combien d’angle ajouter par frame
+    float angle_step = 1.0f, alpha_step=.05f; // combien d’angle/zoom ajouter par frame
+    float x_t=0.0f, x_t_step=5.0f;
+    Complex z_0; // centre
+    z_0.re = surf->w/2.0f;
+    z_0.im = surf->h/2.0f; 
 
-    Uint32 last_time = SDL_GetTicks();
+    SDL_Rect zone = {100, 100, 500, 500};
+
+    Uint32 last_time = SDL_GetTicks(); //milli sec since start
     int running = 1;
 
-    while (running && angle <= angle_max) {
+    while (running) {
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) {
@@ -228,11 +235,33 @@ int mainSDL(){
         }
 
         Uint32 now = SDL_GetTicks();
-        if (now - last_time >= 33) { // ~30 fps
+        if (now - last_time >= 33) { //1000/30 =~33fps
             last_time = now;
 
+            SDL_Surface *current;
+            if(now/1000 <= 1){ //3sec passed
+                current = apply_zoom(surf, alpha, z_0);
+                alpha += alpha_step;
+            }else if (now/1000 <= 2){
+                current = apply_zoom_sur_zone(surf, alpha, zone);
+                alpha += alpha_step;
+            }else if (now/1000 <= 3){
+                current = apply_rotation_sur_zone(surf, angle, zone);
+                angle += angle_step;
+            }else if (now/1000 <= 4){
+                current = apply_rotation(surf, angle, z_0);
+                angle += angle_step;
+            }else if (now/1000 <= 5){
+                current = apply_trans(surf, x_t, 0);
+                x_t+=x_t_step;
+            }else if (now/1000 <= 6){
+                current = apply_rotation_d(surf, angle, d0, d1, d_max, z_0);
+                angle += angle_step;
+            }else{
+                running = 0;
+            }
             // appliquer l’effet avec l’angle courant
-            SDL_Surface* current = apply_rotation_d(surf, angle, d0, d1, d_max, z_0);
+            
             if (!current) break;
 
             SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, current);
@@ -240,24 +269,21 @@ int mainSDL(){
             if (!texture) break;
 
             SDL_RenderClear(renderer);
-            SDL_Rect src = {0, 0, surf->w, surf->h};
-            SDL_Rect dst = window_dimensions;
             SDL_RenderCopy(renderer, texture, &src, &dst);
             SDL_RenderPresent(renderer);
 
             SDL_DestroyTexture(texture);
 
-            // augmenter l’angle
-            angle += angle_step;
+            
         }
     }
+    return 0;
 
 }
-*/
 
 
 int main() {
-    
+    /*
     // example utilisation zoom sur le terminal
     int w=10,h=10;
     float alpha = 2;
@@ -265,7 +291,7 @@ int main() {
     int** img_org = createImage(w, h);
     loadImage(img_org, w, h);
 
-    /*
+    / *
     // zoom ------------------
     int** img_des = applique_zoom(img_org, w, h, alpha, z_0, -1);
     afficheImage(img_org, w, h);
