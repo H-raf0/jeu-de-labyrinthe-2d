@@ -2,23 +2,25 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
-#include <stdbool.h>
-#include <SDL2/SDL.h>  // Nécessite SDL2 installée pour compilation et linkage
+#include <SDL2/SDL.h> 
 
-#define CELL_SIZE 25
+#define TAILLE_CELLULE 25 // Taille graphique d'une cellule dans SDL
 
+// Structure représentant une partition (ensemble disjoint)
 typedef struct {
     int *parent;
     int *rang;
-    int size;
+    int taille;
 } partition;
 
+// Structure représentant une arête entre deux cellules
 typedef struct {
-    int u, v;
+    int u, v; // les deux cellules connectées
 } arete;
 
+// Initialise une partition de taille 'total'
 void init_partition(partition* p, int total) {
-    p->size = total;
+    p->taille = total;
     p->parent = malloc(sizeof(int) * total);
     p->rang = malloc(sizeof(int) * total);
     if (!p->parent || !p->rang) {
@@ -31,20 +33,23 @@ void init_partition(partition* p, int total) {
     }
 }
 
+// Libère la mémoire d'une partition
 void free_partition(partition* p) {
     free(p->parent);
     free(p->rang);
 }
 
-int trouver_classe(partition* p, int i) {
+// Renvoie l'identifiant de la classe de l'élément i (avec compression de chemin)
+int recuperer_classe(partition* p, int i) {
     if (p->parent[i] != i)
-        p->parent[i] = trouver_classe(p, p->parent[i]);
+        p->parent[i] = recuperer_classe(p, p->parent[i]);
     return p->parent[i];
 }
 
+// Fusionne les classes des éléments i et j
 int fusion(partition* p, int i, int j) {
-    int ri = trouver_classe(p, i);
-    int rj = trouver_classe(p, j);
+    int ri = recuperer_classe(p, i);
+    int rj = recuperer_classe(p, j);
     if (ri != rj) {
         if (p->rang[ri] < p->rang[rj]) {
             p->parent[ri] = rj;
@@ -59,6 +64,7 @@ int fusion(partition* p, int i, int j) {
     return 0;
 }
 
+// Mélange les arêtes aléatoirement (Fisher-Yates)
 void fisher_yates(arete G[], int n) {
     srand((unsigned)time(NULL));
     for (int i = n - 1; i > 0; i--) {
@@ -69,223 +75,238 @@ void fisher_yates(arete G[], int n) {
     }
 }
 
-int generation_grille_vide(arete **G_ptr, int rows, int cols) {
-    //int total_cells = rows * cols;
-    int max_edges = 2 * rows * cols - rows - cols;
-    arete *G = malloc(sizeof(arete) * max_edges);
+// Génère une grille vide avec toutes les arêtes possibles verticales et horizontales
+int generation_grille_vide(arete **G_ptr, int lignes, int colonnes) {
+    int max_aretes = 2 * lignes * colonnes - lignes - colonnes; // (n-1) * m + (m-1) * n = 2 * n * m - m - n
+    arete *G = malloc(sizeof(arete) * max_aretes); // tab de tous les aretes possibles
     if (!G) {
         fprintf(stderr, "Allocation mémoire impossible pour arêtes\n");
         exit(EXIT_FAILURE);
     }
-    int edge_count = 0;
-    for (int y = 0; y < rows; y++) {
-        for (int x = 0; x < cols; x++) {
-            int i = y * cols + x;
-            if (y + 1 < rows) G[edge_count++] = (arete){i, (y + 1) * cols + x}; // bas
-            if (x + 1 < cols) G[edge_count++] = (arete){i, y * cols + (x + 1)};       // droite
+    int compteur = 0;
+    for (int y = 0; y < lignes; y++) {
+        for (int x = 0; x < colonnes; x++) {
+            int i = y * colonnes + x;  // indice du noeud de coord x,y
+            if (y + 1 < lignes) G[compteur++] = (arete){i, (y + 1) * colonnes + x}; // si != dernier ligne alors ajoute l'arete vers le bas
+            if (x + 1 < colonnes) G[compteur++] = (arete){i, y * colonnes + (x + 1)}; // si != dernier colonne alors ajoute l'arete vers le droite
         }
     }
     *G_ptr = G;
-    return edge_count;
+    return compteur; // nombre des aretes
 }
 
-void construire_arbre_couvrant(arete G[], int edge_count, arete *arbre, int* tree_count, int total_cells) {
+// Construit un arbre couvrant minimal à partir des arêtes (kruskal)
+void construire_arbre_couvrant(arete G[], int nb_aretes, arete *arbre, int* nb_arbre, int nb_cellules) {
     partition p;
-    init_partition(&p, total_cells);
-    *tree_count = 0;
-    for (int i = 0; i < edge_count; i++) {
-        if (fusion(&p, G[i].u, G[i].v)) {
-            arbre[*tree_count] = G[i];
-            (*tree_count)++;
-            if (*tree_count >= total_cells - 1) break;
+    init_partition(&p, nb_cellules);
+    *nb_arbre = 0;
+    for (int i = 0; i < nb_aretes; i++) {
+        if (fusion(&p, G[i].u, G[i].v)) { //s il ne sont pas deja dans la meme classe
+            arbre[*nb_arbre] = G[i];
+            (*nb_arbre)++;
+            if (*nb_arbre >= nb_cellules - 1) break;
         }
     }
     free_partition(&p);
 }
 
-void generer_dot(const char* nom, arete edges[], int count) {
+// Génère un fichier DOT pour visualisation de graphe
+void generer_dot(const char* nom, arete aretes[], int nb) {
     FILE* f = fopen(nom, "w");
     if (!f) {
         perror("Erreur ouverture fichier DOT");
         return;
     }
     fprintf(f, "graph G {\n  node [shape=circle];\n");
-    for (int i = 0; i < count; i++) {
-        fprintf(f, "  %d -- %d;\n", edges[i].u, edges[i].v);
+    for (int i = 0; i < nb; i++) {
+        fprintf(f, "  %d -- %d;\n", aretes[i].u, aretes[i].v);
     }
     fprintf(f, "}\n");
     fclose(f);
 }
 
-void index_to_coord(int index, int cols, int* x, int* y) {
-    *y = index / cols;
-    *x = index % cols;
+// Convertit un indice en coordonnées x, y
+void indice_vers_coord(int indice, int colonnes, int* x, int* y) {
+    *y = indice / colonnes;
+    *x = indice % colonnes;
 }
 
-void supprimer_mur(int *murs, int cols, int u, int v) {
-    int x1, y1, x2, y2;
-    index_to_coord(u, cols, &x1, &y1);
-    index_to_coord(v, cols, &x2, &y2);
-    int dx = x2 - x1;
+// la fonction supprime un mur entre deux cellules adjacentes
+//=============================================================================================================================//
+// 15 -> 1111     murs de tous les cotes                                                                                       //
+//  8 -> 1000     mur à gauche                                                                                                 //
+//  4 -> 0100     mur en bas                                                                                                   //
+//  2 -> 0010     mur à droite                                                                                                 //
+//  1 -> 0001     mur en haut                                                                                                  //
+// chaque bit represente la presence d'un mur dans une position                                                                //
+// si par exemple on a 4 murs autour de u, donc murs[u] sera égale à 1|2|3|4 = 0001|0010|0100|1000 = 1111 = 15                 //
+// et pour supprimer un mur, on doit d'abord inverser le nombre qui represente le murs par '~'par exemple pour le mur droite   //
+// droite ~2 = 1101 et si on fait murs[u]&~2, le seule bit qui va changer est le troisieme et deviendre 0                      //
+//=============================================================================================================================//
+void supprimer_mur(int *murs, int colonnes, int u, int v) {
+    int x1, y1, x2, y2; //coord des cellules 
+    indice_vers_coord(u, colonnes, &x1, &y1);
+    indice_vers_coord(v, colonnes, &x2, &y2);
+    //distance entre les 2 cellures pour determiner la position d'une par rapport à l'autre (haut, bas, droit,gauche)
+    int dx = x2 - x1; 
     int dy = y2 - y1;
-    int idx1 = y1 * cols + x1;
-    int idx2 = y2 * cols + x2;
-    if (dx == 1) {
-        murs[idx1] &= ~2;
-        murs[idx2] &= ~8;
-    } else if (dx == -1) {
+    int idx1 = y1 * colonnes + x1; // = u, juste pour quelle se voit
+    int idx2 = y2 * colonnes + x2; // = v, juste pour quelle se voit
+    if (dx == 1) { // v à droite de u
+        murs[idx1] &= ~2; // supprimer mur à droite de u 
+        murs[idx2] &= ~8; // supprimer mur à gauche de v 
+    } else if (dx == -1) { // v à gauche de u
         murs[idx1] &= ~8;
         murs[idx2] &= ~2;
-    } else if (dy == 1) {
-        murs[idx1] &= ~4;
-        murs[idx2] &= ~1;
-    } else if (dy == -1) {
+    } else if (dy == 1) { // v en bas de u
+        murs[idx1] &= ~4; // bas
+        murs[idx2] &= ~1; // haut
+    } else if (dy == -1) { // v en haut de u
         murs[idx1] &= ~1;
         murs[idx2] &= ~4;
     }
 }
 
-void dessiner_murs(SDL_Renderer* renderer, int x, int y, int *murs, int cols) {
-    int px = x * CELL_SIZE;
-    int py = y * CELL_SIZE;
-    int val = murs[y * cols + x];
-    if (val & 1) SDL_RenderDrawLine(renderer, px, py, px + CELL_SIZE, py);
-    if (val & 2) SDL_RenderDrawLine(renderer, px + CELL_SIZE, py, px + CELL_SIZE, py + CELL_SIZE);
-    if (val & 4) SDL_RenderDrawLine(renderer, px, py + CELL_SIZE, px + CELL_SIZE, py + CELL_SIZE);
-    if (val & 8) SDL_RenderDrawLine(renderer, px, py, px, py + CELL_SIZE);
+// Dessine les murs d'une cellule donnée avec SDL
+void dessiner_murs(SDL_Renderer* rendu, int x, int y, int *murs, int colonnes) {
+    int px = x * TAILLE_CELLULE;
+    int py = y * TAILLE_CELLULE;
+    int val = murs[y * colonnes + x];
+    if (val & 1) SDL_RenderDrawLine(rendu, px, py, px + TAILLE_CELLULE, py); // haut
+    if (val & 2) SDL_RenderDrawLine(rendu, px + TAILLE_CELLULE, py, px + TAILLE_CELLULE, py + TAILLE_CELLULE); // droite
+    if (val & 4) SDL_RenderDrawLine(rendu, px, py + TAILLE_CELLULE, px + TAILLE_CELLULE, py + TAILLE_CELLULE); // bas
+    if (val & 8) SDL_RenderDrawLine(rendu, px, py, px, py + TAILLE_CELLULE); // gauche
 }
 
-void afficher_labyrinthe_sdl(arete arbre[], int nb_aretes, int rows, int cols) {
+// Affiche le labyrinthe avec SDL
+void afficher_labyrinthe_sdl(arete arbre[], int nb_aretes, int lignes, int colonnes) {
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         fprintf(stderr, "Erreur SDL: %s\n", SDL_GetError());
         return;
     }
-    int window_width = cols * CELL_SIZE;
-    int window_height = rows * CELL_SIZE;
-    SDL_Window* win = SDL_CreateWindow("Labyrinthe",
+    int largeur = colonnes * TAILLE_CELLULE;
+    int hauteur = lignes * TAILLE_CELLULE;
+    SDL_Window* fenetre = SDL_CreateWindow("Labyrinthe",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        window_width, window_height, SDL_WINDOW_SHOWN);
-    SDL_Renderer* renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    SDL_RenderClear(renderer);
-    int total = rows * cols;
+        largeur+1, hauteur+1, SDL_WINDOW_SHOWN);
+    SDL_Renderer* rendu = SDL_CreateRenderer(fenetre, -1, SDL_RENDERER_ACCELERATED);
+    SDL_SetRenderDrawColor(rendu, 0, 0, 0, 255);
+    SDL_RenderClear(rendu);
+    int total = lignes * colonnes;
     int *murs = malloc(sizeof(int) * total);
     if (!murs) {
         fprintf(stderr, "Allocation mémoire impossible pour murs\n");
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(win);
+        SDL_DestroyRenderer(rendu);
+        SDL_DestroyWindow(fenetre);
         SDL_Quit();
         return;
     }
-    for (int i = 0; i < total; i++) murs[i] = 1|2|4|8;
-    for (int i = 0; i < nb_aretes; i++) supprimer_mur(murs, cols, arbre[i].u, arbre[i].v);
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-    for (int y = 0; y < rows; y++) for (int x = 0; x < cols; x++) dessiner_murs(renderer, x, y, murs, cols);
-    SDL_RenderPresent(renderer);
+    for (int i = 0; i < total; i++) murs[i] = 1|2|4|8; // = 15
+    for (int i = 0; i < nb_aretes; i++) supprimer_mur(murs, colonnes, arbre[i].u, arbre[i].v);
+    SDL_SetRenderDrawColor(rendu, 0, 255, 0, 255);
+    for (int y = 0; y < lignes; y++)
+        for (int x = 0; x < colonnes; x++)
+            dessiner_murs(rendu, x, y, murs, colonnes);
+    SDL_RenderPresent(rendu);
     SDL_Event e;
-    int quit = 0;
-    while (!quit) {
+    int quitter = 0;
+    while (!quitter) {
         while (SDL_PollEvent(&e)) {
-            if (e.type == SDL_QUIT) quit = 1;
+            if (e.type == SDL_QUIT) quitter = 1;
         }
         SDL_Delay(10);
     }
     free(murs);
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(win);
+    SDL_DestroyRenderer(rendu);
+    SDL_DestroyWindow(fenetre);
     SDL_Quit();
 }
 
-void afficher_labyrinthe_unicode(int *murs, int rows, int cols) {
+// Affiche le labyrinthe en mode texte avec Unicode
+void afficher_labyrinthe_unicode(int *murs, int lignes, int colonnes) {
+    // bordure haut
     printf("┌");
-    for (int x = 0; x < cols; x++) {
+    for (int x = 0; x < colonnes; x++) {
         printf("──");
-        printf(x < cols - 1 ? "┬" : "┐");
+        printf(x < colonnes - 1 ? "┬" : "┐");
     }
     printf("\n");
-    for (int y = 0; y < rows; y++) {
-        printf("│");
-        for (int x = 0; x < cols; x++) {
+    for (int y = 0; y < lignes; y++) {
+        printf("│"); // bordure gauche
+        for (int x = 0; x < colonnes; x++) {
             printf("  ");
-            int val = murs[y * cols + x];
+            int val = murs[y * colonnes + x];
             printf(val & 2 ? "│" : " ");
         }
         printf("\n");
-        if (y < rows - 1) {
+        if (y < lignes - 1) {
             printf("├");
-            for (int x = 0; x < cols; x++) {
-                int val = murs[y * cols + x];
+            for (int x = 0; x < colonnes; x++) {
+                int val = murs[y * colonnes + x];
                 printf(val & 4 ? "──" : "  ");
-                printf(x < cols - 1 ? "┼" : "┤");
+                printf(x < colonnes - 1 ? "┼" : "┤");
             }
             printf("\n");
         }
     }
+    // bordure bas
     printf("└");
-    for (int x = 0; x < cols; x++) {
+    for (int x = 0; x < colonnes; x++) {
         printf("──");
-        printf(x < cols - 1 ? "┴" : "┘");
+        printf(x < colonnes - 1 ? "┴" : "┘");
     }
     printf("\n");
 }
 
+// Fonction principale
 int main(int argc, char* argv[]) {
-    if (argc < 3) {
-        printf("Usage: %s <rows> <cols>\n", argv[0]);
+    if (argc < 4) {
+        printf("Usage: %s <lignes> <colonnes> <SDL-0/1>\n", argv[0]);
         return 1;
     }
-    int rows = atoi(argv[1]);
-    int cols = atoi(argv[2]);
-    if (rows <= 0 || cols <= 0) {
-        fprintf(stderr, "Dimensions invalides: rows et cols doivent être > 0\n");
+    int lignes = atoi(argv[1]);
+    int colonnes = atoi(argv[2]);
+    int utiliser_sdl = atoi(argv[3]); // console ou SDL
+    if (lignes <= 0 || colonnes <= 0) {
+        fprintf(stderr, "Dimensions invalides : lignes et colonnes doivent être > 0\n");
         return 1;
     }
-    // Choisir mode d'affichage : true pour SDL, false pour console
-    bool use_sdl = false; // <--- modifier ici selon besoin
 
-    int total_cells = rows * cols;
+    
+
+    int total_cellules = lignes * colonnes;
     arete *graphe;
-    int edge_count = generation_grille_vide(&graphe, rows, cols);
-    fisher_yates(graphe, edge_count);
-    arete *arbre = malloc(sizeof(arete) * total_cells);
+    int nb_aretes = generation_grille_vide(&graphe, lignes, colonnes);
+    fisher_yates(graphe, nb_aretes);
+
+    arete *arbre = malloc(sizeof(arete) * total_cellules);
     if (!arbre) {
         fprintf(stderr, "Allocation mémoire impossible pour arbre\n");
         free(graphe);
         return 1;
     }
-    int tree_count;
-    construire_arbre_couvrant(graphe, edge_count, arbre, &tree_count, total_cells);
-    generer_dot("graphe.dot", graphe, edge_count);
-    generer_dot("arbre.dot", arbre, tree_count);
+    int nb_arbre;
+    construire_arbre_couvrant(graphe, nb_aretes, arbre, &nb_arbre, total_cellules);
+    generer_dot("graphe.dot", graphe, nb_aretes);
+    generer_dot("arbre.dot", arbre, nb_arbre);
     printf("Fichiers DOT générés : graphe.dot et arbre.dot\n");
 
-    int *murs = malloc(sizeof(int) * total_cells);
+    int *murs = malloc(sizeof(int) * total_cellules);
     if (!murs) {
         fprintf(stderr, "Allocation mémoire impossible pour murs\n");
         free(graphe);
         free(arbre);
         return 1;
     }
-    for (int i = 0; i < total_cells; i++) murs[i] = 1|2|4|8;
-    for (int i = 0; i < tree_count; i++) {
-        int u = arbre[i].u;
-        int v = arbre[i].v;
-        int x1 = u % cols, y1 = u / cols;
-        int x2 = v % cols, y2 = v / cols;
-        int dx = x2 - x1;
-        int dy = y2 - y1;
-        int idx1 = y1 * cols + x1;
-        int idx2 = y2 * cols + x2;
-        if (dx == 1) { murs[idx1] &= ~2; murs[idx2] &= ~8; }
-        else if (dx == -1) { murs[idx1] &= ~8; murs[idx2] &= ~2; }
-        else if (dy == 1) { murs[idx1] &= ~4; murs[idx2] &= ~1; }
-        else if (dy == -1) { murs[idx1] &= ~1; murs[idx2] &= ~4; }
+    for (int i = 0; i < total_cellules; i++) murs[i] = 1|2|4|8;
+    for (int i = 0; i < nb_arbre; i++) {
+        supprimer_mur(murs, colonnes, arbre[i].u, arbre[i].v);
     }
 
-    if (use_sdl) {
-        afficher_labyrinthe_sdl(arbre, tree_count, rows, cols);
+    if (utiliser_sdl) {
+        afficher_labyrinthe_sdl(arbre, nb_arbre, lignes, colonnes);
     } else {
-        afficher_labyrinthe_unicode(murs, rows, cols);
+        afficher_labyrinthe_unicode(murs, lignes, colonnes);
     }
 
     free(graphe);

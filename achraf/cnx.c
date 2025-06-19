@@ -186,7 +186,6 @@ void ecrire_composantes_dot(const char *fichier, int **M, int N, Partition *p) {
 
 typedef struct {
     int u, v;
-    float w;      // poids de l'arête
 } Arete;
 
 
@@ -211,8 +210,7 @@ Graphe* generer_graphe_aretes(int N, float prob) {
     for (int i = 0; i < N; i++) {
         for (int j = i + 1; j < N; j++) {
             if ((rand()/(float)RAND_MAX) < prob) {  // (rand()/(float)RAND_MAX) entre 0 et 1
-                float poids = rand()/(float)RAND_MAX;
-                g->aretes[g->nb_aretes++] = (Arete){ i, j, poids };
+                g->aretes[g->nb_aretes++] = (Arete){ i, j };
             }
         }
     }
@@ -240,21 +238,6 @@ void ecrire_graphe_aretes_dot(const char *fichier, Graphe *g) {
 
     fclose(f);
 }
-
-
-// ======================== Kruskal ==============================
-
-
-int cmp_arete(const void *a, const void *b) {
-    float wa = ((Arete*)a)->w;
-    float wb = ((Arete*)b)->w;
-    if (wa < wb) return -1;
-    else if (wa > wb) return +1;
-    return 0;
-}
-
-
-
 
 
 
@@ -305,4 +288,5 @@ int main(void) {
 
     return 0;
 }
+
 
