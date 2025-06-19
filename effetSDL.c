@@ -82,10 +82,10 @@ SDL_Surface* apply_zoom_sur_zone(SDL_Surface* src, float alpha, SDL_Rect zone) {
         return NULL;
     }
 
-    // Conversion de la surface source en format RGBA32 pour un traitement uniforme
+    // Conversion en RGBA32 si nécessaire
     SDL_Surface* converted_src = NULL;
     SDL_Surface* working_src = src;
-    
+
     if (src->format->format != SDL_PIXELFORMAT_RGBA32) {
         converted_src = SDL_ConvertSurfaceFormat(src, SDL_PIXELFORMAT_RGBA32, 0);
         if (!converted_src) {
@@ -95,64 +95,56 @@ SDL_Surface* apply_zoom_sur_zone(SDL_Surface* src, float alpha, SDL_Rect zone) {
         working_src = converted_src;
     }
 
-    // Création de la surface de destination
-    SDL_Surface* dest = SDL_CreateRGBSurfaceWithFormat(0, zone.w, zone.h, 32, SDL_PIXELFORMAT_RGBA32);
+    // Destination : copie complète de l’image
+    SDL_Surface* dest = SDL_ConvertSurface(working_src, working_src->format, 0);
     if (!dest) {
         printf("Error creating destination surface: %s\n", SDL_GetError());
         if (converted_src) SDL_FreeSurface(converted_src);
         return NULL;
     }
 
-    // Verrouillage des surfaces si nécessaire
+    // Lock si nécessaire
     if (SDL_MUSTLOCK(working_src)) SDL_LockSurface(working_src);
     if (SDL_MUSTLOCK(dest)) SDL_LockSurface(dest);
 
-    // Accès aux pixels en 32-bit
     Uint32* src_pixels = (Uint32*)working_src->pixels;
     Uint32* dest_pixels = (Uint32*)dest->pixels;
-    int src_pitch = working_src->pitch / 4;   // pitch en termes de pixels 32-bit
+    int src_pitch = working_src->pitch / 4;
     int dest_pitch = dest->pitch / 4;
 
-    // Centre du zoom
     Complex z_0 = {
         .re = zone.x + zone.w / 2.0f,
         .im = zone.y + zone.h / 2.0f
     };
 
-    // Traitement pixel par pixel
     for (int y = 0; y < zone.h; y++) {
         for (int x = 0; x < zone.w; x++) {
-            // Coordonnées dans l'image originale (sans zoom)
             Complex zp = {
                 .re = (float)(zone.x + x),
                 .im = (float)(zone.y + y)
             };
-            
-            // Application du zoom inverse
+
+            // Zoom inverse
             Complex z = zoom_inverse(zp, z_0, alpha);
-            
-            // Conversion en coordonnées entières
+
             int x_src = (int)floor(z.re);
             int y_src = (int)floor(z.im);
-            
-            // Copie du pixel si dans les limites
-            if (x_src >= 0 && x_src < working_src->w && y_src >= 0 && y_src < working_src->h) {
-                dest_pixels[y * dest_pitch + x] = src_pixels[y_src * src_pitch + x_src];
-            } else {
-                // Noir transparent en dehors des limites
-                dest_pixels[y * dest_pitch + x] = 0;
+
+            Uint32 couleur = 0;
+            if (x_src >= 0 && x_src < working_src->w &&
+                y_src >= 0 && y_src < working_src->h) {
+                couleur = src_pixels[y_src * src_pitch + x_src];
             }
+
+            dest_pixels[(zone.y + y) * dest_pitch + (zone.x + x)] = couleur;
         }
     }
 
-    // Déverrouillage des surfaces
+    // Unlock
     if (SDL_MUSTLOCK(dest)) SDL_UnlockSurface(dest);
     if (SDL_MUSTLOCK(working_src)) SDL_UnlockSurface(working_src);
-    
-    // Nettoyage
-    if (converted_src) {
-        SDL_FreeSurface(converted_src);
-    }
+
+    if (converted_src) SDL_FreeSurface(converted_src);
 
     return dest;
 }
@@ -440,18 +432,16 @@ SDL_Surface* apply_rotation_d(SDL_Surface* src, float angle, int d0, int d1, int
 }
 
 
-SDL_Surface* apply_rotation_sur_zone(SDL_Surface* src, float angle, SDL_Rect zone) {
-    // Vérification des paramètres de la zone
+SDL_Surface* apply_rotation_sur_zone(SDL_Surface* src, float angle_deg, SDL_Rect zone) {
     if (zone.x < 0 || zone.y < 0 || zone.w <= 0 || zone.h <= 0 || 
         zone.x + zone.w > src->w || zone.y + zone.h > src->h) {
-        printf("Error: Invalid zoom zone parameters\n");
+        printf("Error: Invalid zone parameters\n");
         return NULL;
     }
 
-    // Conversion de la surface source en format RGBA32 pour un traitement uniforme
     SDL_Surface* converted_src = NULL;
     SDL_Surface* working_src = src;
-    
+
     if (src->format->format != SDL_PIXELFORMAT_RGBA32) {
         converted_src = SDL_ConvertSurfaceFormat(src, SDL_PIXELFORMAT_RGBA32, 0);
         if (!converted_src) {
@@ -461,67 +451,59 @@ SDL_Surface* apply_rotation_sur_zone(SDL_Surface* src, float angle, SDL_Rect zon
         working_src = converted_src;
     }
 
-    // Création de la surface de destination
-    SDL_Surface* dest = SDL_CreateRGBSurfaceWithFormat(0, zone.w, zone.h, 32, SDL_PIXELFORMAT_RGBA32);
+    // Destination : copie complète de l'image source
+    SDL_Surface* dest = SDL_ConvertSurface(working_src, working_src->format, 0);
     if (!dest) {
         printf("Error creating destination surface: %s\n", SDL_GetError());
         if (converted_src) SDL_FreeSurface(converted_src);
         return NULL;
     }
 
-    // Verrouillage des surfaces si nécessaire
+    // Lock si besoin
     if (SDL_MUSTLOCK(working_src)) SDL_LockSurface(working_src);
     if (SDL_MUSTLOCK(dest)) SDL_LockSurface(dest);
 
-    // Accès aux pixels en 32-bit
     Uint32* src_pixels = (Uint32*)working_src->pixels;
     Uint32* dest_pixels = (Uint32*)dest->pixels;
-    int src_pitch = working_src->pitch / 4;   // pitch en termes de pixels 32-bit
+    int src_pitch = working_src->pitch / 4;
     int dest_pitch = dest->pitch / 4;
 
-    // Centre du zoom
+    float angle_rad = angle_deg * M_PI / 180.0f;
+
     Complex z_0 = {
         .re = zone.x + zone.w / 2.0f,
         .im = zone.y + zone.h / 2.0f
     };
 
-    // Traitement pixel par pixel
     for (int y = 0; y < zone.h; y++) {
         for (int x = 0; x < zone.w; x++) {
-            // Coordonnées dans l'image originale (sans zoom)
             Complex zp = {
-                .re = (float)(zone.x + x),
-                .im = (float)(zone.y + y)
+                .re = zone.x + x,
+                .im = zone.y + y
             };
-            
-            // Application du zoom inverse
-            Complex z = rotation_img(zp, z_0, angle*M_PI/180);
-            
-            // Conversion en coordonnées entières
+
+            Complex z = rotation_img(zp, z_0, angle_rad);
+
             int x_src = (int)floor(z.re);
             int y_src = (int)floor(z.im);
-            
-            // Copie du pixel si dans les limites
-            if (x_src >= 0 && x_src < working_src->w && y_src >= 0 && y_src < working_src->h) {
-                dest_pixels[y * dest_pitch + x] = src_pixels[y_src * src_pitch + x_src];
+
+            if (x_src >= 0 && x_src < working_src->w &&
+                y_src >= 0 && y_src < working_src->h) {
+                dest_pixels[(zone.y + y) * dest_pitch + (zone.x + x)] =
+                    src_pixels[y_src * src_pitch + x_src];
             } else {
-                // Noir transparent en dehors des limites
-                dest_pixels[y * dest_pitch + x] = 0;
+                dest_pixels[(zone.y + y) * dest_pitch + (zone.x + x)] = 0; // transparent
             }
         }
     }
 
-    // Déverrouillage des surfaces
     if (SDL_MUSTLOCK(dest)) SDL_UnlockSurface(dest);
     if (SDL_MUSTLOCK(working_src)) SDL_UnlockSurface(working_src);
-    
-    // Nettoyage
-    if (converted_src) {
-        SDL_FreeSurface(converted_src);
-    }
+    if (converted_src) SDL_FreeSurface(converted_src);
 
     return dest;
 }
+
 
 
 

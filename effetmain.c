@@ -41,8 +41,6 @@ void free2D(int **tab, int w) {
     }
 }
 
-
-
 int** applique_zoom(int** originale, int org_w, int org_h, float alpha, Complex z_0, int couleur_par_defaut){
     Complex zp, z;
     int x,y,couleur;
@@ -87,7 +85,6 @@ int** applique_zoom_sur_zone(int** originale, int org_w, int org_h, Complex zone
     }
     return destination;
 }
-
 
 int** applique_trans(int** originale, int org_w, int org_h, int x_t, int y_t, int couleur_par_defaut){
     Complex zp, z;
@@ -147,7 +144,7 @@ int mainSDL(){
 
 
 
-    SDL_Surface *surf = IMG_Load("img1.png");
+    SDL_Surface *surf = IMG_Load("img.png");
     if (!surf) {
         printf("Erreur chargement image : %s\n", IMG_GetError());
         return 0;
@@ -161,7 +158,7 @@ int mainSDL(){
     //SDL_Surface *dest = apply_zoom(surf, alpha, z_0);
     // zoom partiel
     SDL_Rect z_zp = {100, 100, 500, 500};
-    //SDL_Surface *dest = apply_zoom_sur_zone(surf, alpha, z_zp);
+    SDL_Surface *dest = apply_zoom_sur_zone(surf, alpha, z_zp);
     
     //exemple translation
     //SDL_Surface *dest = apply_trans(surf, 100.0, 50.0);
@@ -172,7 +169,7 @@ int mainSDL(){
 
     //SDL_Surface *dest = apply_rotation_d(surf, Angle_max, d0, d1, dmax, z_0);
 
-    SDL_Surface *dest = apply_rotation_sur_zone(surf, Angle_max, z_zp);
+    //SDL_Surface *dest = apply_rotation_sur_zone(surf, Angle_max, z_zp);
     if (!dest) {
         printf("Erreur chargement image : %s\n", IMG_GetError());
         return 0;
@@ -185,7 +182,7 @@ int mainSDL(){
 
     SDL_RenderClear(renderer);
     SDL_QueryTexture(text_dest, NULL, NULL, &source.w, &source.h); 
-    SDL_RenderCopy(renderer, text_dest, &source, &source); //SDL_RenderCopy(renderer, text_dest, &source, &destination); //plein ecran
+    SDL_RenderCopy(renderer, text_dest, &source, &destination); //SDL_RenderCopy(renderer, text_dest, &source, &destination); //plein ecran
     SDL_RenderPresent(renderer);
     SDL_Delay(3000);
     
