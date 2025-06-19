@@ -3,6 +3,7 @@
 #include <SDL2/SDL_rect.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 
 
@@ -109,8 +110,27 @@ int** applique_trans(int** originale, int org_w, int org_h, int x_t, int y_t, in
     return destination;
 }
 
+int** applique_rotation(int** originale, int org_w, int org_h, Complex z_0, float angle, int couleur_par_defaut){
 
+    Complex zp, z;
+    int x,y,couleur;
+    int** destination = createImage(org_w, org_h);
+    for(int j = 0; j<org_h; j++){
+        for(int i = 0; i<org_w; i++){
+            zp = coordonnee_image_vers_complexe(i, j);
+            z = rotation_img(zp, z_0, -angle);
+            complexe_vers_coordonnee_image(z, &x, &y);
+            if (x >= 0 && x < org_w && y >= 0 && y < org_h){
+                couleur = originale[x][y];
+            }else{
+                couleur = couleur_par_defaut;
+            }
+            destination[i][j] = couleur;
+        }
+    }
+    return destination;
 
+}
 
 
 
@@ -127,30 +147,47 @@ int mainSDL(){
 
 
 
-    SDL_Surface *surf = IMG_Load("img2.png");
+    SDL_Surface *surf = IMG_Load("img1.png");
     if (!surf) {
         printf("Erreur chargement image : %s\n", IMG_GetError());
         return 0;
     }
-    //float alpha = 1;
-    //Complex z_0;
+    
     // exemple de zoom totale
-    //z_0.re = surf->w/2.0f;
-    //z_0.im = surf->h/2.0f;  // centre
+    float alpha = 1.6f;
+    Complex z_0;
+    z_0.re = surf->w/2.0f;
+    z_0.im = surf->h/2.0f;  // centre
     //SDL_Surface *dest = apply_zoom(surf, alpha, z_0);
     // zoom partiel
-    //SDL_Rect z_zp = {100, 100, 200, 200};
+    SDL_Rect z_zp = {100, 100, 500, 500};
     //SDL_Surface *dest = apply_zoom_sur_zone(surf, alpha, z_zp);
+    
     //exemple translation
-    SDL_Surface *dest = apply_trans(surf, 100.0, 50.0);
-    SDL_Texture *text_dest = SDL_CreateTextureFromSurface(renderer, dest); //surf to text
+    //SDL_Surface *dest = apply_trans(surf, 100.0, 50.0);
+    //exemple rotation
+    //SDL_Surface *dest = apply_rotation(surf, 50, z_0);
+    float Angle_max = 45;
+    float d0 = 0, dmax = 100, d1 = 400;
 
+    //SDL_Surface *dest = apply_rotation_d(surf, Angle_max, d0, d1, dmax, z_0);
+
+    SDL_Surface *dest = apply_rotation_sur_zone(surf, Angle_max, z_zp);
+    if (!dest) {
+        printf("Erreur chargement image : %s\n", IMG_GetError());
+        return 0;
+    }
+    SDL_Texture *text_dest = SDL_CreateTextureFromSurface(renderer, dest); //surf to text
+    if (!text_dest) {
+        printf("Erreur chargement texture : %s\n", IMG_GetError());
+        return 0;
+    }
 
     SDL_RenderClear(renderer);
     SDL_QueryTexture(text_dest, NULL, NULL, &source.w, &source.h); 
-    SDL_RenderCopy(renderer, text_dest, &source, &destination);
+    SDL_RenderCopy(renderer, text_dest, &source, &source); //SDL_RenderCopy(renderer, text_dest, &source, &destination); //plein ecran
     SDL_RenderPresent(renderer);
-    SDL_Delay(2000);
+    SDL_Delay(3000);
     
     SDL_FreeSurface(dest);
     SDL_FreeSurface(surf);
@@ -160,16 +197,78 @@ int mainSDL(){
     return 0;
 }
 
+/*
+int mainSDL(){
+    // ================================les Initialisations===================================
+    SDL_Window* window;
+    SDL_Renderer* renderer;
+    SDL_Rect window_dimensions = {0};
+    InitialisationSDL(&window, &renderer, &window_dimensions);
+    SDL_Rect source = {0}, destination = {0};
+    SDL_GetWindowSize(window, &window_dimensions.w, &window_dimensions.h);
+    destination = window_dimensions;
+    SDL_Surface *surf = IMG_Load("img1.png");
+    if (!surf) {
+        printf("Erreur chargement image : %s\n", IMG_GetError());
+        return 0;
+    }
+    // ==================================      end    ========================================
+
+    float angle = 0.0f;
+    float angle_max = 60.0f;
+    float d0 = 200, d_max = 600, d1 = 1000;
+    float angle_step = 1.0f; // combien d’angle ajouter par frame
+
+    Uint32 last_time = SDL_GetTicks();
+    int running = 1;
+
+    while (running && angle <= angle_max) {
+        SDL_Event e;
+        while (SDL_PollEvent(&e)) {
+            if (e.type == SDL_QUIT) {
+                running = 0;
+            }
+        }
+
+        Uint32 now = SDL_GetTicks();
+        if (now - last_time >= 33) { // ~30 fps
+            last_time = now;
+
+            // appliquer l’effet avec l’angle courant
+            SDL_Surface* current = apply_rotation_d(surf, angle, d0, d1, d_max, z_0);
+            if (!current) break;
+
+            SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, current);
+            SDL_FreeSurface(current);
+            if (!texture) break;
+
+            SDL_RenderClear(renderer);
+            SDL_Rect src = {0, 0, surf->w, surf->h};
+            SDL_Rect dst = window_dimensions;
+            SDL_RenderCopy(renderer, texture, &src, &dst);
+            SDL_RenderPresent(renderer);
+
+            SDL_DestroyTexture(texture);
+
+            // augmenter l’angle
+            angle += angle_step;
+        }
+    }
+
+}
+*/
+
+
 int main() {
-    /*
+    
     // example utilisation zoom sur le terminal
     int w=10,h=10;
     float alpha = 2;
-    Complex z_0 = {w/2,h/2};
+    //Complex z_0 = {w/2,h/2};
     int** img_org = createImage(w, h);
     loadImage(img_org, w, h);
 
-    / *
+    /*
     // zoom ------------------
     int** img_des = applique_zoom(img_org, w, h, alpha, z_0, -1);
     afficheImage(img_org, w, h);
@@ -189,7 +288,7 @@ int main() {
     printf("\n\n\n\n");
     afficheImage(img_des, (int) zone_w, (int) zone_h);
     free2D(img_des, zone_w);
-    * /
+    
     // translate ---------------------------
 
     int tx=2, ty=2;
@@ -198,7 +297,14 @@ int main() {
     printf("\n\n\n\n");
     afficheImage(img_des, (int) w, (int) h);
     free2D(img_des, w);
-
+    * /
+    // rotation -----------------------
+    Complex z_0 = {w/2,h/2};
+    int** img_des = applique_rotation(img_org, w, h, z_0, 45, -1);
+    afficheImage(img_org, w, h);
+    printf("\n\n\n\n");
+    afficheImage(img_des, (int) w, (int) h);
+    free2D(img_des, w);
     
     free2D(img_org, w);
     free(img_org);
