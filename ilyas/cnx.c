@@ -14,7 +14,7 @@ typedef struct {
 Partition* creer_partition(int n) {
     Partition *p = malloc(sizeof(Partition));
     p->parent = malloc(n * sizeof(int));
-    p->rank = calloc(n, sizeof(int));  // Initialisé à 0
+    p->rank = calloc(n,sizeof(int));  // Initialisé à 0
     p->size = n;
     for (int i = 0; i < n; i++) p->parent[i] = i;
     return p;
@@ -136,7 +136,7 @@ void ecrire_composantes_dot(const char *filename, int **mat, int n, Partition *p
         }
         if (!est_racine) continue;
 
-        fprintf(f, "  subgraph cluster_%d {\n", racines[r]);
+        fprintf(f, "  les sous graphes _%d {\n", racines[r]);
         fprintf(f, "    label = \"Composante %d\";\n", racines[r]);
         for (int i = 0; i < n; i++) {
             if (trouver(p, i) == racines[r]) {
@@ -157,6 +157,7 @@ void ecrire_composantes_dot(const char *filename, int **mat, int n, Partition *p
 }
 
 
+
 void afficher_nombres_composantes(Partition *p) {
     int *comptes = calloc(p->size, sizeof(int));
     for (int i = 0; i < p->size; i++) {
@@ -167,7 +168,7 @@ void afficher_nombres_composantes(Partition *p) {
     printf("\nTaille des composantes connexes :\n");
     for (int i = 0; i < p->size; i++) {
         if (comptes[i] > 0) {
-            printf("Composante de racine %d : %d nœud(s)\n", i, comptes[i]);
+            printf("Composante de racine %d : %d noeud(s)\n", i, comptes[i]);
         }
     }
     free(comptes);
@@ -176,7 +177,7 @@ void afficher_nombres_composantes(Partition *p) {
 
 
 
-
+/*
 
 int main() {
     srand(time(NULL));
@@ -199,7 +200,8 @@ int main() {
     liberer_partition(p);
     return 0;
 }
-/*
+*/
+
 typedef struct {
     int u, v;
 } Arete;
@@ -272,7 +274,3 @@ int main() {
     return 0;
 }
 
-
-
-
-*/
