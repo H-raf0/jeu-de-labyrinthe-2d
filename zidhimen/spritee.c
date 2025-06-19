@@ -73,8 +73,7 @@ int main() {
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         SDL_Log("Erreur initialisation SDL : %s\n", SDL_GetError());
         exit(EXIT_FAILURE);
-    }
-
+    }    
     SDL_Window* window = SDL_CreateWindow("fenetre", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 
                                           SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE);
     if (!window) end_sdl(0, "Erreur création fenêtre", NULL, NULL);
