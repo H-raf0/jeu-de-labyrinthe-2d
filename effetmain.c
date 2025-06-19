@@ -1,138 +1,168 @@
-#include "effetSDL.h"
 #include "bSDL.h"
+#include "effetSDL.h"
 #include <SDL2/SDL_rect.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 
 
 
-
-
-int** createImage(int w, int h) {
-    int** img = (int**) malloc(sizeof(int*) * w);
-    for (int i = 0; i < w; i++) {
-        img[i] = (int*) malloc(sizeof(int) * h);
+int main(int argc, char * argv[]) {
+    // ================================les Initialisations===================================
+    char img_loc[50];
+    if(argc < 2) {
+        printf("La structure est : ./exec \"img.png\"\n");
+        return 0;
     }
-    return img;
-}
-
-void loadImage(int** img, int w, int h){
-    for(int j = 0; j<h; j++){
-        for(int i = 0; i<w; i++){
-            //img[i][j] = i%(h/10) + j%(w/10);
-            img[i][j] = (i+j)%9;
-        }
+    else {
+        strcpy(img_loc,argv[1]);
     }
-}
 
-void afficheImage(int** img, int w, int h){
-    for(int j = 0; j<h; j++){
-        for(int i = 0; i<w; i++){
-            printf("%d ", img[i][j]);
-        }
-        printf("\n");
+    SDL_Window* window;
+    SDL_Renderer* renderer;
+    SDL_Rect window_dimensions = {0};
+    InitialisationSDL(&window, &renderer, &window_dimensions);
+    SDL_GetWindowSize(window, &window_dimensions.w, &window_dimensions.h);
+    SDL_Surface *surf = IMG_Load(img_loc);
+    if (!surf) {
+        printf("Erreur chargement image : %s\n", IMG_GetError());
+        return 0;
     }
-}
 
-void free2D(int **tab, int w) {
-    for (int i = 0; i < w; i++) {
-        free(tab[i]);
+
+    SDL_Rect src = {0, 0, surf->w, surf->h};
+    SDL_Rect dst = window_dimensions;
+
+    float angle = 0.0f, alpha =1.0f;
+    float angle_max = 60.0f;
+    float d0 = 200, d_max = 600, d1 = 1000;
+    float angle_step = 1.0f, alpha_step=.05f; // combien d’angle/zoom ajouter par frame
+    float x_t=0.0f, y_t=0.0f, t_step=5.0f;
+    Complex z_0; // centre
+    z_0.re = surf->w/2.0f;
+    z_0.im = surf->h/2.0f; 
+
+    SDL_Rect zone = {100, 100, 500, 500};
+
+    int running = 1;
+    SDL_Event event;
+
+    // ==================================      end    ========================================
+
+    SDL_Surface* current = NULL;
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surf);
+    if (!texture) {
+        printf("Erreur création texture initiale : %s\n", SDL_GetError());
+        return 1;
     }
-}
+    while(running) {
 
-int** applique_zoom(int** originale, int org_w, int org_h, float alpha, Complex z_0, int couleur_par_defaut){
-    Complex zp, z;
-    int x,y,couleur;
-    int** destination = createImage(org_w, org_h);
-    for(int j = 0; j<org_h; j++){
-        for(int i = 0; i<org_w; i++){
-            zp = coordonnee_image_vers_complexe(i, j);
-            z = zoom_inverse(zp, z_0, alpha);
-            complexe_vers_coordonnee_image(z, &x, &y);
-            if (x >= 0 && x < org_w && y >= 0 && y < org_h){
-                couleur = originale[x][y];
-            }else{
-                couleur = couleur_par_defaut;
+        while(SDL_PollEvent(&event)) {
+
+            switch(event.type) {
+                case SDL_QUIT:
+                    running = 0;
+                    break;
+                case SDL_MOUSEBUTTONDOWN:
+                    z_0.re = event.button.x;
+                    z_0.im = event.button.y;
+                    printf("Nouveau centre de transformation : %f, %f\n", z_0.re, z_0.im);
+                    break;
+                case SDL_KEYDOWN:
+                    if (current != NULL) {
+                        SDL_FreeSurface(current);
+                        current = NULL;
+                    }
+                    switch(event.key.keysym.sym) {
+                        case SDLK_d:
+                            printf("Translation vers la droite\n");
+                            current = apply_trans(surf, x_t, 0);
+                            x_t += t_step;
+                            break;
+                        case SDLK_q:
+                            printf("Translation vers la gauche\n");
+                            current = apply_trans(surf, x_t, 0);
+                            x_t -= t_step;
+                            break;
+                        case SDLK_z:
+                            printf("Translation vers le haut\n");
+                            current = apply_trans(surf, 0, y_t);
+                            y_t -= t_step;
+                            break;
+                        case SDLK_s:
+                            printf("Translation vers le bas\n");
+                            current = apply_trans(surf, 0, y_t);
+                            y_t += t_step;
+                            break;
+                        case SDLK_RIGHT:
+                            printf("Rotation anti trigonométrique\n");
+                            current = apply_rotation_d(surf, angle, d0, d1, d_max, z_0);
+                            angle += angle_step;
+                            break;
+                        case SDLK_LEFT:
+                            printf("Rotation trigonométrique\n");
+                            current = apply_rotation_d(surf, angle, d0, d1, d_max, z_0);
+                            angle -= angle_step;
+                            break;
+                        case SDLK_UP:
+                            printf("Zoom\n");
+                            current = apply_zoom(surf, alpha, z_0);
+                            alpha += alpha_step;
+                            break;
+                        case SDLK_DOWN:
+                            printf("Dezoom\n");
+                            current = apply_zoom(surf, alpha, z_0);
+                            alpha -= alpha_step;
+                            break;
+                        case SDLK_SPACE:
+                            printf("Réinitialisation des transformations\n");
+                            x_t = 0;
+                            y_t = 0;
+                            angle = 0;
+                            z_0.re = surf->w/2.0f;
+                            z_0.im = surf->h/2.0f;
+                            break;
+                    }
+                    break;
             }
-            destination[i][j] = couleur;
         }
-    }
-    return destination;
-}
-
-int** applique_zoom_sur_zone(int** originale, int org_w, int org_h, Complex zone_z, int zone_w, int zone_h, float alpha, int couleur_par_defaut){
-    Complex zp, z, z_0;
-
-    //centre de zoom
-    z_0.re = zone_z.re + zone_w/2.0;
-    z_0.im = zone_z.im + zone_h/2.0;
-    
-    int x,y,couleur;
-    int** destination = createImage(zone_w, zone_h);
-    for(int j = 0; j<zone_h; j++){
-        for(int i = 0; i<zone_w; i++){
-            zp = coordonnee_image_vers_complexe((zone_w + zone_z.re - 1)+i, (zone_h + zone_z.im - 1)+j);
-            z = zoom_inverse(zp, z_0, alpha);
-            complexe_vers_coordonnee_image(z, &x, &y);
-            if (x >= 0 && x < org_w && y >= 0 && y < org_h){
-                couleur = originale[x][y];
-            }else{
-                couleur = couleur_par_defaut;
+        
+        if (current != NULL) {
+            SDL_DestroyTexture(texture);
+            texture = SDL_CreateTextureFromSurface(renderer, current);
+            if (!texture) {
+                printf("Erreur création texture : %s\n", SDL_GetError());
+                running = 0;
             }
-            destination[i][j] = couleur;
+            SDL_FreeSurface(current);
+            current = NULL;
         }
+        
+        // rendu
+        SDL_RenderClear(renderer);
+        SDL_RenderCopy(renderer, texture, &src, &dst);
+        SDL_RenderPresent(renderer);
+
+        SDL_Delay(1);
     }
-    return destination;
+
+    SDL_FreeSurface(surf);
+    if(texture) SDL_DestroyTexture(texture);
+    destroyAndQuit(&window, &renderer); 
+
+    return 0;
 }
 
-int** applique_trans(int** originale, int org_w, int org_h, int x_t, int y_t, int couleur_par_defaut){
-    Complex zp, z;
-    int x,y,couleur;
-    int** destination = createImage(org_w, org_h);
-    for(int j = 0; j<org_h; j++){
-        for(int i = 0; i<org_w; i++){
-            zp = coordonnee_image_vers_complexe(i, j); //dest
-            z = translation_inverse(zp, x_t, y_t);
-            complexe_vers_coordonnee_image(z, &x, &y);
-            if (x >= 0 && x < org_w && y >= 0 && y < org_h){
-                couleur = originale[x][y];
-            }else{
-                couleur = couleur_par_defaut;
-                printf("%d %d\n", i, j);
-            }
-            destination[i][j] = couleur;
-        }
-    }
-    return destination;
-}
 
-int** applique_rotation(int** originale, int org_w, int org_h, Complex z_0, float angle, int couleur_par_defaut){
 
-    Complex zp, z;
-    int x,y,couleur;
-    int** destination = createImage(org_w, org_h);
-    for(int j = 0; j<org_h; j++){
-        for(int i = 0; i<org_w; i++){
-            zp = coordonnee_image_vers_complexe(i, j);
-            z = rotation_img(zp, z_0, -angle);
-            complexe_vers_coordonnee_image(z, &x, &y);
-            if (x >= 0 && x < org_w && y >= 0 && y < org_h){
-                couleur = originale[x][y];
-            }else{
-                couleur = couleur_par_defaut;
-            }
-            destination[i][j] = couleur;
-        }
-    }
-    return destination;
 
-}
+
 
 
 
 /*
-int mainSDL(){
+int main(){
 
     SDL_Window* window;
     SDL_Renderer* renderer;
@@ -144,21 +174,26 @@ int mainSDL(){
 
 
 
-    SDL_Surface *surf = IMG_Load("img.png");
+    SDL_Surface *surf = IMG_Load("img1.png");
     if (!surf) {
         printf("Erreur chargement image : %s\n", IMG_GetError());
         return 0;
     }
     
     // exemple de zoom totale
-    float alpha = 1.6f;
+    float alpha = 2.0f;
     Complex z_0;
     z_0.re = surf->w/2.0f;
     z_0.im = surf->h/2.0f;  // centre
-    //SDL_Surface *dest = apply_zoom(surf, alpha, z_0);
+    SDL_Surface *dest = apply_zoom(surf, alpha, z_0);
+    if (!surf) {
+        printf("Erreur chargement text : %s\n", IMG_GetError());
+        return 0;
+    }
+    
     // zoom partiel
     SDL_Rect z_zp = {100, 100, 500, 500};
-    SDL_Surface *dest = apply_zoom_sur_zone(surf, alpha, z_zp);
+    //apply_zoom_sur_zone(surf, alpha, z_zp);
     
     //exemple translation
     //SDL_Surface *dest = apply_trans(surf, 100.0, 50.0);
@@ -170,15 +205,10 @@ int mainSDL(){
     //SDL_Surface *dest = apply_rotation_d(surf, Angle_max, d0, d1, dmax, z_0);
 
     //SDL_Surface *dest = apply_rotation_sur_zone(surf, Angle_max, z_zp);
-    if (!dest) {
-        printf("Erreur chargement image : %s\n", IMG_GetError());
-        return 0;
-    }
-    SDL_Texture *text_dest = SDL_CreateTextureFromSurface(renderer, dest); //surf to text
-    if (!text_dest) {
-        printf("Erreur chargement texture : %s\n", IMG_GetError());
-        return 0;
-    }
+
+    SDL_Texture *text_dest = SDL_CreateTextureFromSurface(renderer, dest);
+    SDL_FreeSurface(dest);
+
 
     SDL_RenderClear(renderer);
     SDL_QueryTexture(text_dest, NULL, NULL, &source.w, &source.h); 
@@ -186,7 +216,6 @@ int mainSDL(){
     SDL_RenderPresent(renderer);
     SDL_Delay(3000);
     
-    SDL_FreeSurface(dest);
     SDL_FreeSurface(surf);
     SDL_DestroyTexture(text_dest);
     destroyAndQuit(&window, &renderer); 
@@ -194,8 +223,8 @@ int mainSDL(){
     return 0;
 }
 */
-
-int mainSDL(){
+/*
+int main(){
     // ================================les Initialisations===================================
     SDL_Window* window;
     SDL_Renderer* renderer;
@@ -279,62 +308,6 @@ int mainSDL(){
     }
     return 0;
 
-}
+}*/
 
-
-int main() {
-    /*
-    // example utilisation zoom sur le terminal
-    int w=10,h=10;
-    float alpha = 2;
-    //Complex z_0 = {w/2,h/2};
-    int** img_org = createImage(w, h);
-    loadImage(img_org, w, h);
-
-    / *
-    // zoom ------------------
-    int** img_des = applique_zoom(img_org, w, h, alpha, z_0, -1);
-    afficheImage(img_org, w, h);
-    printf("\n\n\n\n");
-    afficheImage(img_des, (int) w, (int) h);
-    free2D(img_des, w);
-    
-    // zoom paritel---------------
-    Complex zone_z = {6, 6};
-    int zone_w = 4;
-    int zone_h = 4;
-    z_0.re = (zone_z.re + 1 + zone_w)/2;
-    z_0.im = (zone_z.im + 1 + zone_h)/2;
-    int** img_des = applique_zoom_sur_zone(img_org, w, h, zone_z, zone_w, zone_h, alpha, -1);
-
-    afficheImage(img_org, w, h);
-    printf("\n\n\n\n");
-    afficheImage(img_des, (int) zone_w, (int) zone_h);
-    free2D(img_des, zone_w);
-    
-    // translate ---------------------------
-
-    int tx=2, ty=2;
-    int** img_des = applique_trans(img_org, w, h, tx, ty, -1);
-    afficheImage(img_org, w, h);
-    printf("\n\n\n\n");
-    afficheImage(img_des, (int) w, (int) h);
-    free2D(img_des, w);
-    * /
-    // rotation -----------------------
-    Complex z_0 = {w/2,h/2};
-    int** img_des = applique_rotation(img_org, w, h, z_0, 45, -1);
-    afficheImage(img_org, w, h);
-    printf("\n\n\n\n");
-    afficheImage(img_des, (int) w, (int) h);
-    free2D(img_des, w);
-    
-    free2D(img_org, w);
-    free(img_org);
-    free(img_des);
-    */
-    
-    mainSDL();
-    
-}
 

@@ -54,6 +54,10 @@ Complex rotation_inverse_d(Complex z, Complex z0, float Angle_max, int d0, int d
     }
 }
 
+
+
+
+
 Complex coordonnee_image_vers_complexe(int x, int y) {
     Complex z = {
         .re = x,
@@ -63,8 +67,8 @@ Complex coordonnee_image_vers_complexe(int x, int y) {
 }
 
 void complexe_vers_coordonnee_image(Complex z, int* x, int* y) {
-    *x = (int) roundf(z.re);
-    *y = (int) roundf(z.im);
+    *x = (int) floor(z.re);
+    *y = (int) floor(z.im);
 }
 
 
@@ -147,12 +151,12 @@ SDL_Surface* apply_zoom_sur_zone(SDL_Surface* src, float alpha, SDL_Rect zone) {
 }
 
 
-
 SDL_Surface* apply_zoom(SDL_Surface* src, float alpha, Complex z_0) {
+    // Create a temporary converted surface if needed
     SDL_Surface* converted_src = NULL;
     SDL_Surface* working_src = src;
-
-    // Conversion  en RGBA32
+    
+    // Convert to RGBA32 if not already in that format
     if (src->format->format != SDL_PIXELFORMAT_RGBA32) {
         converted_src = SDL_ConvertSurfaceFormat(src, SDL_PIXELFORMAT_RGBA32, 0);
         if (!converted_src) {
@@ -162,59 +166,59 @@ SDL_Surface* apply_zoom(SDL_Surface* src, float alpha, Complex z_0) {
         working_src = converted_src;
     }
 
-    // Création de dest au même format que working_src
-    SDL_Surface* dest = SDL_CreateRGBSurfaceWithFormat(
-        0,
-        working_src->w,
-        working_src->h,
-        working_src->format->BitsPerPixel,
-        working_src->format->format
-    );
+    // Create destination surface (same format as working source)
+    SDL_Surface* dest = SDL_CreateRGBSurfaceWithFormat(0, working_src->w, working_src->h, 
+                                                      working_src->format->BitsPerPixel, 
+                                                      working_src->format->format);
     if (!dest) {
         printf("Error creating destination surface: %s\n", SDL_GetError());
         if (converted_src) SDL_FreeSurface(converted_src);
         return NULL;
     }
 
+    // Lock surfaces if needed
+    if (SDL_MUSTLOCK(working_src)) SDL_LockSurface(working_src);
+    if (SDL_MUSTLOCK(dest)) SDL_LockSurface(dest);
 
-    // Récupération des pointeurs et pitch
-    Uint8* src_pixels  = (Uint8*)working_src->pixels;
+    // Get pixel access information
+    const int src_bpp = working_src->format->BytesPerPixel;
+    const int dest_bpp = dest->format->BytesPerPixel;
+    Uint8* src_pixels = (Uint8*)working_src->pixels;
     Uint8* dest_pixels = (Uint8*)dest->pixels;
-    int   bpp          = working_src->format->BytesPerPixel;
-    int   src_pitch    = working_src->pitch;
-    int   dest_pitch   = dest->pitch;
 
-    // Boucle de zoom inverse
-    for (int j = 0; j < dest->h; j++) {
-        for (int i = 0; i < dest->w; i++) {
-            Complex z_dest = coordonnee_image_vers_complexe(i, j);
-            Complex z_src  = zoom_inverse(z_dest, z_0, alpha);
+    // Process each pixel
+    for (int y = 0; y < dest->h; y++) { 
+        for (int x = 0; x < dest->w; x++) {
+            Complex z_dest = coordonnee_image_vers_complexe(x, y);
+            Complex z_src = zoom_inverse(z_dest, z_0, alpha);
+            
+            int x_src = 0, y_src = 0;
+            complexe_vers_coordonnee_image(z_src, &x_src, &y_src);
 
-            int x_src = (int)floorf(z_src.re);
-            int y_src = (int)floorf(z_src.im);
-
-            Uint8* dest_p = dest_pixels + j * dest_pitch + i * bpp;
-            if (x_src >= 0 && x_src < working_src->w &&
-                y_src >= 0 && y_src < working_src->h) {
-                Uint8* src_p = src_pixels + y_src * src_pitch + x_src * bpp;
-                memcpy(dest_p, src_p, bpp);
+            // Calculate memory positions
+            Uint8* dest_p = dest_pixels + y * dest->pitch + x * dest_bpp;
+            
+            if (x_src >= 0 && x_src < working_src->w && y_src >= 0 && y_src < working_src->h) {
+                Uint8* src_p = src_pixels + y_src * working_src->pitch + x_src * src_bpp;
+                memcpy(dest_p, src_p, src_bpp);
             } else {
-                // Pixel hors zone → transparent
-                memset(dest_p, 0, bpp);
+                // Set to transparent black (0) for out-of-bounds
+                memset(dest_p, 0, dest_bpp);
             }
         }
     }
 
+    // Unlock surfaces
+    if (SDL_MUSTLOCK(dest)) SDL_UnlockSurface(dest);
+    if (SDL_MUSTLOCK(working_src)) SDL_UnlockSurface(working_src);
 
-    // Nettoyage conversion
-    if (converted_src) SDL_FreeSurface(converted_src);
+    // Free the temporary converted surface if we created one
+    if (converted_src) {
+        SDL_FreeSurface(converted_src);
+    }
 
     return dest;
 }
-
-
-
-
 //translation avec x_t,y_t
 SDL_Surface* apply_trans(SDL_Surface* src, float x_t, float y_t) {
     // Create a temporary converted surface if needed
