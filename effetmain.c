@@ -9,14 +9,13 @@
 
 
 int main(int argc, char * argv[]) {
-    // ================================les Initialisations===================================
+    // ================================ Initialization ===================================
     char img_loc[50];
     if(argc < 2) {
-        printf("La structure est : ./exec \"img.png\"\n");
+        printf("Usage: ./exec \"img.png\"\n");
         return 0;
-    }
-    else {
-        strcpy(img_loc,argv[1]);
+    } else {
+        strcpy(img_loc, argv[1]);
     }
 
     SDL_Window* window;
@@ -24,132 +23,152 @@ int main(int argc, char * argv[]) {
     SDL_Rect window_dimensions = {0};
     InitialisationSDL(&window, &renderer, &window_dimensions);
     SDL_GetWindowSize(window, &window_dimensions.w, &window_dimensions.h);
-    SDL_Surface *surf = IMG_Load(img_loc);
-    if (!surf) {
-        printf("Erreur chargement image : %s\n", IMG_GetError());
+    
+    SDL_Surface *original_surf = IMG_Load(img_loc);
+    if (!original_surf) {
+        printf("Image loading error: %s\n", IMG_GetError());
         return 0;
     }
 
+    // Create a working copy of the original surface
+    SDL_Surface *current_surf = SDL_ConvertSurface(original_surf, original_surf->format, 0);
+    if (!current_surf) {
+        printf("Surface copy error: %s\n", SDL_GetError());
+        SDL_FreeSurface(original_surf);
+        return 0;
+    }
 
-    SDL_Rect src = {0, 0, surf->w, surf->h};
+    SDL_Rect src = {0, 0, current_surf->w, current_surf->h};
     SDL_Rect dst = window_dimensions;
 
-    float angle = 0.0f, alpha =1.0f;
-    float angle_max = 60.0f;
+    float angle = 0.0f, alpha = 1.0f;
+    //float angle_max = 60.0f;
     float d0 = 200, d_max = 600, d1 = 1000;
-    float angle_step = 1.0f, alpha_step=.05f; // combien d’angle/zoom ajouter par frame
-    float x_t=0.0f, y_t=0.0f, t_step=5.0f;
-    Complex z_0; // centre
-    z_0.re = surf->w/2.0f;
-    z_0.im = surf->h/2.0f; 
-
-    SDL_Rect zone = {100, 100, 500, 500};
+    float angle_step = 1.0f, alpha_step = 0.05f;
+    float x_t = 0.0f, y_t = 0.0f, t_step = 5.0f;
+    Complex z_0 = {current_surf->w / 2.0f, current_surf->h / 2.0f}; // center
 
     int running = 1;
     SDL_Event event;
+    int transformed = 0; // 1 updated à no
 
-    // ==================================      end    ========================================
-
-    SDL_Surface* current = NULL;
-    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surf);
+    // Initial texture from current_surf
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, current_surf);
     if (!texture) {
-        printf("Erreur création texture initiale : %s\n", SDL_GetError());
+        printf("Texture creation error: %s\n", SDL_GetError());
+        SDL_FreeSurface(original_surf);
+        SDL_FreeSurface(current_surf);
         return 1;
     }
-    while(running) {
 
-        while(SDL_PollEvent(&event)) {
+    // ================================== Main Loop ========================================
+    while (running) {
+        transformed = 0; // Reset each frame
 
-            switch(event.type) {
+        while (SDL_PollEvent(&event)) {
+            switch (event.type) {
                 case SDL_QUIT:
                     running = 0;
                     break;
                 case SDL_MOUSEBUTTONDOWN:
                     z_0.re = event.button.x;
                     z_0.im = event.button.y;
-                    printf("Nouveau centre de transformation : %f, %f\n", z_0.re, z_0.im);
+                    printf("New transformation center: %.1f, %.1f\n", z_0.re, z_0.im);
                     break;
-                case SDL_KEYDOWN:
-                    if (current != NULL) {
-                        SDL_FreeSurface(current);
-                        current = NULL;
-                    }
-                    switch(event.key.keysym.sym) {
+                case SDL_KEYDOWN: {
+                    SDL_Surface* new_surf = NULL;
+                    
+                    switch (event.key.keysym.sym) {
                         case SDLK_d:
-                            printf("Translation vers la droite\n");
-                            current = apply_trans(surf, x_t, 0);
+                            printf("Right translation\n");
+                            new_surf = apply_trans(current_surf, t_step, 0);
                             x_t += t_step;
                             break;
                         case SDLK_q:
-                            printf("Translation vers la gauche\n");
-                            current = apply_trans(surf, x_t, 0);
+                            printf("Left translation\n");
+                            new_surf = apply_trans(current_surf, -t_step, 0);
                             x_t -= t_step;
                             break;
                         case SDLK_z:
-                            printf("Translation vers le haut\n");
-                            current = apply_trans(surf, 0, y_t);
+                            printf("Upward translation\n");
+                            new_surf = apply_trans(current_surf, 0, -t_step);
                             y_t -= t_step;
                             break;
                         case SDLK_s:
-                            printf("Translation vers le bas\n");
-                            current = apply_trans(surf, 0, y_t);
+                            printf("Downward translation\n");
+                            new_surf = apply_trans(current_surf, 0, t_step);
                             y_t += t_step;
                             break;
                         case SDLK_RIGHT:
-                            printf("Rotation anti trigonométrique\n");
-                            current = apply_rotation_d(surf, angle, d0, d1, d_max, z_0);
+                            printf("Counter-clockwise rotation\n");
+                            new_surf = apply_rotation_d(current_surf, angle_step, d0, d1, d_max, z_0);
                             angle += angle_step;
                             break;
                         case SDLK_LEFT:
-                            printf("Rotation trigonométrique\n");
-                            current = apply_rotation_d(surf, angle, d0, d1, d_max, z_0);
+                            printf("Clockwise rotation\n");
+                            new_surf = apply_rotation_d(current_surf, -angle_step, d0, d1, d_max, z_0);
                             angle -= angle_step;
                             break;
                         case SDLK_UP:
-                            printf("Zoom\n");
-                            current = apply_zoom(surf, alpha, z_0);
-                            alpha += alpha_step;
+                            printf("Zoom in\n");
+                            new_surf = apply_zoom(current_surf, 1.0f + alpha_step, z_0);
+                            alpha *= (1.0f + alpha_step);
                             break;
                         case SDLK_DOWN:
-                            printf("Dezoom\n");
-                            current = apply_zoom(surf, alpha, z_0);
-                            alpha -= alpha_step;
+                            printf("Zoom out\n");
+                            new_surf = apply_zoom(current_surf, 1.0f / (1.0f + alpha_step), z_0);
+                            alpha /= (1.0f + alpha_step);
                             break;
                         case SDLK_SPACE:
-                            printf("Réinitialisation des transformations\n");
+                            printf("Reset transformations\n");
+                            // Reset parameters
                             x_t = 0;
                             y_t = 0;
                             angle = 0;
-                            z_0.re = surf->w/2.0f;
-                            z_0.im = surf->h/2.0f;
+                            alpha = 1.0f;
+                            z_0.re = original_surf->w / 2.0f;
+                            z_0.im = original_surf->h / 2.0f;
+                            // Restore original image
+                            SDL_FreeSurface(current_surf);
+                            current_surf = SDL_ConvertSurface(original_surf, original_surf->format, 0);
+                            transformed = 1;
                             break;
                     }
+
+                    // Update current surface if transformation occurred
+                    if (new_surf) {
+                        SDL_FreeSurface(current_surf);
+                        current_surf = new_surf;
+                        transformed = 1;
+                    }
                     break;
+                }
             }
         }
-        
-        if (current != NULL) {
+
+        // Update texture if surface was modified
+        if (transformed) {
             SDL_DestroyTexture(texture);
-            texture = SDL_CreateTextureFromSurface(renderer, current);
+            texture = SDL_CreateTextureFromSurface(renderer, current_surf);
             if (!texture) {
-                printf("Erreur création texture : %s\n", SDL_GetError());
+                printf("Texture update error: %s\n", SDL_GetError());
                 running = 0;
             }
-            SDL_FreeSurface(current);
-            current = NULL;
         }
-        
-        // rendu
+
+        // Rendering
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, texture, &src, &dst);
         SDL_RenderPresent(renderer);
 
-        SDL_Delay(1);
+        SDL_Delay(5);
     }
 
-    SDL_FreeSurface(surf);
-    if(texture) SDL_DestroyTexture(texture);
-    destroyAndQuit(&window, &renderer); 
+    // Cleanup
+    SDL_FreeSurface(original_surf);
+    SDL_FreeSurface(current_surf);
+    if (texture) SDL_DestroyTexture(texture);
+    destroyAndQuit(&window, &renderer);
 
     return 0;
 }
