@@ -64,7 +64,7 @@ void draw_stars(SDL_Renderer* renderer, Star stars[], int count) {
     }
 }
 
-int main(int argc, char* argv[]) {
+int main() {
     SDL_Init(SDL_INIT_VIDEO);
     srand(time(NULL));
 
