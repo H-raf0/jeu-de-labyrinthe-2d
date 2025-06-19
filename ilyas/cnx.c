@@ -136,7 +136,7 @@ void ecrire_composantes_dot(const char *filename, int **mat, int n, Partition *p
         }
         if (!est_racine) continue;
 
-        fprintf(f, "  les sous graphes _%d {\n", racines[r]);
+        fprintf(f, "  subgraph cluster_%d {\n", racines[r]);
         fprintf(f, "    label = \"Composante %d\";\n", racines[r]);
         for (int i = 0; i < n; i++) {
             if (trouver(p, i) == racines[r]) {
