@@ -3,8 +3,12 @@
 #include <time.h>
 #include <string.h>
 #include <SDL2/SDL.h> 
+#include <SDL2/SDL_image.h>
 
-#define TAILLE_CELLULE 25 // Taille graphique d'une cellule dans SDL
+
+#define TUILE_TAILLE 48 // Taille des tuiles dans l'image PNG (par exemple 16x16)
+
+#define TAILLE_CELLULE 100 // Taille graphique d'une cellule dans SDL
 
 // Structure représentant une partition (ensemble disjoint)
 typedef struct {
@@ -66,7 +70,6 @@ int fusion(partition* p, int i, int j) {
 
 // Mélange les arêtes aléatoirement (Fisher-Yates)
 void fisher_yates(arete G[], int n) {
-    srand((unsigned)time(NULL));
     for (int i = n - 1; i > 0; i--) {
         int j = rand() % (i + 1);
         arete tmp = G[i];
@@ -167,6 +170,10 @@ void supprimer_mur(int *murs, int colonnes, int u, int v) {
     }
 }
 
+
+
+//============================== SDL =================================================================
+
 // Dessine les murs d'une cellule donnée avec SDL
 void dessiner_murs(SDL_Renderer* rendu, int x, int y, int *murs, int colonnes) {
     int px = x * TAILLE_CELLULE;
@@ -222,6 +229,143 @@ void afficher_labyrinthe_sdl(arete arbre[], int nb_aretes, int lignes, int colon
     SDL_Quit();
 }
 
+
+
+
+// Ajoute les bordures hautes et gauches dans la fonction dessiner_tuile
+void dessiner_tuile(SDL_Renderer* rendu, SDL_Texture* tileset, int val_murs, int x, int y) {
+    SDL_Rect dst;
+    SDL_Rect src;
+
+    if ((val_murs & 1) && y==0) { // Mur en haut
+        src.x = 2 * TUILE_TAILLE;
+        src.y = TUILE_TAILLE + TUILE_TAILLE / 3;
+        src.w = TUILE_TAILLE;
+        src.h = TUILE_TAILLE / 3;
+
+        dst.x = x * TAILLE_CELLULE;
+        dst.y = y * TAILLE_CELLULE;
+        dst.w = TAILLE_CELLULE;
+        dst.h = TAILLE_CELLULE / 3;
+
+        SDL_RenderCopy(rendu, tileset, &src, &dst);
+    }
+
+    if (val_murs & 2) { // Mur à droite
+        src.x = 2 * TUILE_TAILLE + 2 * TUILE_TAILLE / 3;
+        src.y = TUILE_TAILLE / 3;
+        src.w = TUILE_TAILLE / 3;
+        src.h = TUILE_TAILLE;
+
+        dst.x = x * TAILLE_CELLULE + TAILLE_CELLULE * 5 / 6;
+        dst.y = y * TAILLE_CELLULE;
+        dst.w = TAILLE_CELLULE / 3;
+        dst.h = TAILLE_CELLULE;
+
+        SDL_RenderCopy(rendu, tileset, &src, &dst);
+    }
+
+    if (val_murs & 4) { // Mur en bas
+        src.x = 2 * TUILE_TAILLE;
+        src.y = TUILE_TAILLE + TUILE_TAILLE / 3;
+        src.w = TUILE_TAILLE;
+        src.h = TUILE_TAILLE / 3;
+
+        dst.x = x * TAILLE_CELLULE;
+        dst.y = y * TAILLE_CELLULE + TAILLE_CELLULE * 5 / 6;
+        dst.w = TAILLE_CELLULE;
+        dst.h = TAILLE_CELLULE / 3;
+
+        SDL_RenderCopy(rendu, tileset, &src, &dst);
+    }
+
+    if ((val_murs & 8) && x==0) { // Mur à gauche
+        src.x = 2 * TUILE_TAILLE + 2 * TUILE_TAILLE / 3;
+        src.y = TUILE_TAILLE / 3;
+        src.w = TUILE_TAILLE / 3;
+        src.h = TUILE_TAILLE;
+
+        dst.x = x * TAILLE_CELLULE;
+        dst.y = y * TAILLE_CELLULE;
+        dst.w = TAILLE_CELLULE / 3;
+        dst.h = TAILLE_CELLULE;
+
+        SDL_RenderCopy(rendu, tileset, &src, &dst);
+    }
+}
+
+
+
+void afficher_labyrinthe_sdl_tuiles(int *murs, int lignes, int colonnes) {
+    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+        fprintf(stderr, "Erreur SDL: %s\n", SDL_GetError());
+        return;
+    }
+
+    SDL_Window* fenetre = SDL_CreateWindow("Labyrinthe Tuiles",
+        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+        colonnes * TAILLE_CELLULE, lignes * TAILLE_CELLULE, SDL_WINDOW_SHOWN);
+    SDL_Renderer* rendu = SDL_CreateRenderer(fenetre, -1, SDL_RENDERER_ACCELERATED);
+    
+
+    // Charger l'image comme surface
+    SDL_Surface* tileset_surface = IMG_Load("tileset.png");
+    if (!tileset_surface) {
+        fprintf(stderr, "Erreur chargement tileset.png : %s\n", IMG_GetError());
+        SDL_Quit();
+        exit(EXIT_FAILURE);
+    }
+
+    // Créer une texture depuis la surface
+    SDL_Texture* tileset = SDL_CreateTextureFromSurface(rendu, tileset_surface);
+    if (!tileset) {
+        fprintf(stderr, "Erreur création texture : %s\n", SDL_GetError());
+        SDL_FreeSurface(tileset_surface);
+        SDL_Quit();
+        exit(EXIT_FAILURE);
+    }
+
+    // Libérer la surface car plus nécessaire
+    SDL_FreeSurface(tileset_surface);
+
+    SDL_SetRenderDrawColor(rendu, 0, 0, 0, 255);
+    SDL_RenderClear(rendu);
+
+    // initialisation du arriere plan
+    
+    SDL_Rect src = { 1 * TUILE_TAILLE, 0 * TUILE_TAILLE, TUILE_TAILLE, TUILE_TAILLE };
+    for (int y = 0; y < lignes; y++) {
+        for (int x = 0; x < colonnes; x++) {
+            SDL_Rect dst = { x * TAILLE_CELLULE, y * TAILLE_CELLULE, TAILLE_CELLULE, TAILLE_CELLULE };
+            SDL_RenderCopy(rendu, tileset, &src, &dst);
+        }
+    }
+
+    for (int y = 0; y < lignes; y++) {
+        for (int x = 0; x < colonnes; x++) {
+            int val = murs[y * colonnes + x];
+            dessiner_tuile(rendu, tileset, val, x, y);
+        }
+    }
+
+    SDL_RenderPresent(rendu);
+    SDL_Event e;
+    int quitter = 0;
+    while (!quitter) {
+        while (SDL_PollEvent(&e)) {
+            if (e.type == SDL_QUIT) quitter = 1;
+        }
+        SDL_Delay(10);
+    }
+
+    SDL_DestroyRenderer(rendu);
+    SDL_DestroyWindow(fenetre);
+    SDL_Quit();
+}
+
+// ======================================================= fin Sdl ========================================
+
+
 // Affiche le labyrinthe en mode texte avec Unicode
 void afficher_labyrinthe_unicode(int *murs, int lignes, int colonnes) {
     // bordure haut
@@ -273,7 +417,7 @@ int main(int argc, char* argv[]) {
     }
 
     
-
+    srand(0);
     int total_cellules = lignes * colonnes;
     arete *graphe;
     int nb_aretes = generation_grille_vide(&graphe, lignes, colonnes);
@@ -305,6 +449,7 @@ int main(int argc, char* argv[]) {
 
     if (utiliser_sdl) {
         afficher_labyrinthe_sdl(arbre, nb_arbre, lignes, colonnes);
+        afficher_labyrinthe_sdl_tuiles(murs, lignes, colonnes);
     } else {
         afficher_labyrinthe_unicode(murs, lignes, colonnes);
     }
