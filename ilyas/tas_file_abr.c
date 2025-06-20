@@ -1,22 +1,19 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include "TAS_FILE_ABR_H"
-#define MAX_SIZE 100
-
+#include <stdbool.h>
+//#include "TAS_FILE_ABR_H"
 
 
 typedef struct {
     int valeur;
-    int priorite; // plus la valeur est grande, plus la priorité est haute
+    int priorite; // plus grand = plus prioritaire
 } Noeud;
 
 typedef struct {
-    Noeud data[MAX_SIZE];
+    Noeud *data;
     int size;
+    int capacite;
 } tas;
-
 
 typedef struct file_element {
     int value;
@@ -29,7 +26,7 @@ typedef struct file_element {
 typedef struct file {
     int size;
     struct queue_element * head;
-}
+}file;
 
 
 struct bst {
@@ -39,33 +36,38 @@ struct bst {
 };
 //tas_binaire:
 
-tas * init_tas()
+void echanger(Noeud * a, Noeud *b)
 {
-    tas->size = 0;
-    return tas;
-}
-void echanger(int * a, int *b)
-{
-    int c = *a;
+    Noeud c = *a;
     *a = *b;
     *b = c;
 }
-void inserer_elmt(tas * a, int valeur, inr priorite){
-    if (a)
-    {
-        int i = tas->size++;
-        tas->data[i].valeur = valeur;
-        tas->data[i].priorite = priorite;
-        // Remonter tant que la priorité est supérieure à celle du parent
-        while (i > 0 && tas->data[i].priorite > tas->data[(i - 1) / 2].priorite) {
-        echanger(&file->data[i], &file->data[(i - 1) / 2]);
+bool est_vide(tas *t) {
+    return t->size == 0;
+}
+
+tas *creer_tas(int capacite) {
+    tas *t = malloc(sizeof(tas));
+    t->data = malloc(sizeof(Noeud) * capacite);
+    t->size = 0;
+    t->capacite = capacite;
+    return t;
+}
+
+tas *inserer_elmt(tas *a, int valeur, int priorite) {
+    if (!a || a->size >= a->capacite) return a;
+
+    int i = a->size++;
+    a->data[i].valeur = valeur;
+    a->data[i].priorite = priorite;
+
+    while (i > 0 && a->data[i].priorite > a->data[(i - 1) / 2].priorite) {
+        echanger(&a->data[i], &a->data[(i - 1) / 2]);
         i = (i - 1) / 2;
     }
 
-    }
-
+    return a;
 }
-
 
 
 
@@ -218,5 +220,51 @@ void bstDisplay(struct bst * root) {
     }
       
 }
+int main(){
+    return 0;
+}
 
+/*
+#include <stdio.h>
+#include <stdlib.h>
 
+typedef struct {
+    int valeur;
+    int priorite; // plus grand = plus prioritaire
+} Noeud;
+
+typedef struct {
+    Noeud *data;
+    int size;
+    int capacite;
+} tas;
+
+void echanger(Noeud *a, Noeud *b) {
+    Noeud tmp = *a;
+    *a = *b;
+    *b = tmp;
+}
+
+tas *creer_tas(int capacite) {
+    tas *t = malloc(sizeof(tas));
+    t->data = malloc(sizeof(Noeud) * capacite);
+    t->size = 0;
+    t->capacite = capacite;
+    return t;
+}
+
+tas *inserer_elmt(tas *a, int valeur, int priorite) {
+    if (!a || a->size >= a->capacite) return a;
+
+    int i = a->size++;
+    a->data[i].valeur = valeur;
+    a->data[i].priorite = priorite;
+
+    while (i > 0 && a->data[i].priorite > a->data[(i - 1) / 2].priorite) {
+        echanger(&a->data[i], &a->data[(i - 1) / 2]);
+        i = (i - 1) / 2;
+    }
+
+    return a;
+}
+*/
