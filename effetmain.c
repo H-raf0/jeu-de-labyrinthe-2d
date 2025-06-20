@@ -41,11 +41,10 @@ int main(int argc, char * argv[]) {
     SDL_Rect src = {0, 0, current_surf->w, current_surf->h};
     SDL_Rect dst = window_dimensions;
 
-    float angle = 0.0f, alpha = 1.0f;
     //float angle_max = 60.0f;
-    float d0 = 200, d_max = 600, d1 = 1000;
-    float angle_step = 1.0f, alpha_step = 0.05f;
-    float x_t = 0.0f, y_t = 0.0f, t_step = 5.0f;
+    float d0 = 0, d_max = 150, d1 = 300;
+    float angle_step = 0.1f, alpha_step = 0.05f;
+    float t_step = 5.0f;
     Complex z_0 = {current_surf->w / 2.0f, current_surf->h / 2.0f}; // center
 
     int running = 1;
@@ -60,7 +59,6 @@ int main(int argc, char * argv[]) {
         SDL_FreeSurface(current_surf);
         return 1;
     }
-
     // ================================== Main Loop ========================================
     while (running) {
         transformed = 0; // Reset each frame
@@ -71,10 +69,12 @@ int main(int argc, char * argv[]) {
                     running = 0;
                     break;
                 case SDL_MOUSEBUTTONDOWN:
+                    
                     z_0.re = event.button.x;
                     z_0.im = event.button.y;
                     printf("New transformation center: %.1f, %.1f\n", z_0.re, z_0.im);
                     break;
+                    
                 case SDL_KEYDOWN: {
                     SDL_Surface* new_surf = NULL;
                     
@@ -82,50 +82,55 @@ int main(int argc, char * argv[]) {
                         case SDLK_d:
                             printf("Right translation\n");
                             new_surf = apply_trans(current_surf, t_step, 0);
-                            x_t += t_step;
                             break;
                         case SDLK_q:
                             printf("Left translation\n");
                             new_surf = apply_trans(current_surf, -t_step, 0);
-                            x_t -= t_step;
                             break;
                         case SDLK_z:
                             printf("Upward translation\n");
                             new_surf = apply_trans(current_surf, 0, -t_step);
-                            y_t -= t_step;
                             break;
                         case SDLK_s:
                             printf("Downward translation\n");
                             new_surf = apply_trans(current_surf, 0, t_step);
-                            y_t += t_step;
-                            break;
-                        case SDLK_RIGHT:
-                            printf("Counter-clockwise rotation\n");
-                            new_surf = apply_rotation_d(current_surf, angle_step, d0, d1, d_max, z_0);
-                            angle += angle_step;
-                            break;
-                        case SDLK_LEFT:
-                            printf("Clockwise rotation\n");
-                            new_surf = apply_rotation_d(current_surf, -angle_step, d0, d1, d_max, z_0);
-                            angle -= angle_step;
                             break;
                         case SDLK_UP:
                             printf("Zoom in\n");
                             new_surf = apply_zoom(current_surf, 1.0f + alpha_step, z_0);
-                            alpha *= (1.0f + alpha_step);
                             break;
                         case SDLK_DOWN:
                             printf("Zoom out\n");
                             new_surf = apply_zoom(current_surf, 1.0f / (1.0f + alpha_step), z_0);
-                            alpha /= (1.0f + alpha_step);
+                            break;
+                        case SDLK_RIGHT:
+                            printf("part right rotation\n");
+                            new_surf = apply_rotation_d(current_surf, -angle_step, d0, d1, d_max, z_0);
+                            break;
+                        case SDLK_LEFT:
+                            printf("part left rotation\n");
+                            new_surf = apply_rotation_d(current_surf, angle_step, d0, d1, d_max, z_0);
+                            break;
+                        case SDLK_e:
+                            printf("total right rotation\n");
+                            new_surf = apply_rotation(current_surf, -angle_step, z_0);
+                            break;
+                        case SDLK_a:
+                            printf("total left rotation\n");
+                            new_surf = apply_rotation(current_surf, angle_step, z_0);
+                            break;
+                        case SDLK_o:
+                            printf("zoom in part\n");
+                            new_surf = apply_zoom_partiel(current_surf, 1.0f / (1.0f + alpha_step), z_0, d0, d_max);
+                            break;
+                        case SDLK_l:
+                            printf("zoom out part\n");
+                            new_surf = apply_zoom_partiel(current_surf, 1.0f + alpha_step, z_0, d0, d_max);
                             break;
                         case SDLK_SPACE:
                             printf("Reset transformations\n");
                             // Reset parameters
-                            x_t = 0;
-                            y_t = 0;
-                            angle = 0;
-                            alpha = 1.0f;
+
                             z_0.re = original_surf->w / 2.0f;
                             z_0.im = original_surf->h / 2.0f;
                             // Restore original image
