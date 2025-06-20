@@ -4,8 +4,8 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 
-#define SCREEN_WIDTH 1920
-#define SCREEN_HEIGHT 1080
+#define SCREEN_WIDTH 800
+#define SCREEN_HEIGHT 800
 #define COUCHES_NB 5
 
 void end_sdl(char ok, const char* msg, SDL_Window* window, SDL_Renderer* renderer);

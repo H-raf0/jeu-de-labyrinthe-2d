@@ -72,7 +72,7 @@ void InitialisationSDL(SDL_Window** window, SDL_Renderer** renderer, SDL_Rect* w
         exit(EXIT_FAILURE);
     }
 
-    *window = SDL_CreateWindow("Dragon", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+    *window = SDL_CreateWindow("fenetre", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                                           SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE);
     if (!window) end_sdl(0, "Erreur création fenêtre", NULL, NULL);
 
