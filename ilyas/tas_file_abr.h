@@ -1,29 +1,15 @@
 #ifndef TAS_FILE_ABR_H
 #define TAS_FILE_ABR_H
 typedef struct {
-    int data[MAX_SIZE];
+    int valeur;
+    int priorite; // plus la valeur est grande, plus la priorité est haute
+} Noeud;
+
+typedef struct {
+    Noeud data[MAX_SIZE];
     int size;
 } tas;
 
-/*typedef struct {
-    int data[MAX_SIZE];  // Tableau de stockage
-    int front;           // Indice de la tête de la file
-    int rear;            // Indice de la queue
-    int size;            // Nombre d’éléments dans la file
-} CircularQueue;*/
-
-typedef struct file_element {
-    int value;
-    struct queue_element * previous;
-    struct queue_element * next;
-} queue_element;
-
-
-
-typedef struct file {
-    int size;
-    struct queue_element * head;
-}
 
 
 struct bst {

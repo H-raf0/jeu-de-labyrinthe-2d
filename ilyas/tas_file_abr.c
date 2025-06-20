@@ -5,8 +5,15 @@
 #include "TAS_FILE_ABR_H"
 #define MAX_SIZE 100
 
+
+
 typedef struct {
-    int data[MAX_SIZE];
+    int valeur;
+    int priorite; // plus la valeur est grande, plus la priorité est haute
+} Noeud;
+
+typedef struct {
+    Noeud data[MAX_SIZE];
     int size;
 } tas;
 
@@ -30,6 +37,36 @@ struct bst {
         struct bst * left;
         struct bst * right;
 };
+//tas_binaire:
+
+tas * init_tas()
+{
+    tas->size = 0;
+    return tas;
+}
+void echanger(int * a, int *b)
+{
+    int c = *a;
+    *a = *b;
+    *b = c;
+}
+void inserer_elmt(tas * a, int valeur, inr priorite){
+    if (a)
+    {
+        int i = tas->size++;
+        tas->data[i].valeur = valeur;
+        tas->data[i].priorite = priorite;
+        // Remonter tant que la priorité est supérieure à celle du parent
+        while (i > 0 && tas->data[i].priorite > tas->data[(i - 1) / 2].priorite) {
+        echanger(&file->data[i], &file->data[(i - 1) / 2]);
+        i = (i - 1) / 2;
+    }
+
+    }
+
+}
+
+
 
 
 

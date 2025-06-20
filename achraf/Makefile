@@ -1,4 +1,4 @@
-SRC ?= sprite.c bSDL.c
+SRC ?= kruksal.c
 EXE := exec
 
 CC := gcc
