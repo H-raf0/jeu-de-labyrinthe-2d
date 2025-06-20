@@ -425,27 +425,98 @@ Complex rotation_inverse_d(Complex z_prime, Complex z0, float Angle_max, float d
 }
 
 //
-Complex rotation_inverse_d_continu(Complex z_prime, Complex z0, float theta0, float seuil, float D) {
+Complex rotation_inverse_d_continu(Complex z_prime, Complex z0, float theta0, float lambda, float T) {
     float dx = z_prime.re - z0.re;
     float dy = z_prime.im - z0.im;
     float mod_z = sqrt(dx * dx + dy * dy);
 
-    if (mod_z > D) {
+    if (lambda <= 0.0f || lambda >= 1.0f) {
+        // Valeur de lambda invalide
         return z_prime;
     }
 
-    // Calcul de K : K = D / (d * ln(theta0 / seuil))
-    float ln_ratio = log(theta0 / seuil);
-    if (ln_ratio <= 0) ln_ratio = 1e-6; // éviter division par zéro ou log négatif
-    float K = D / ln_ratio;
+    // K = T / ln(lambda⁻¹) = T / ln(1/lambda)
+    float K = T / log(1.0f / lambda);
 
-    // Angle en fonction de la distance
+    if (mod_z > T) {
+        return z_prime;
+    }
+
+    // θ(z) = θ₀ × exp(-|z| / K)
     float angle = theta0 * exp(-mod_z / K);
 
     return rotation_img(z_prime, z0, angle);
 }
 
 
+SDL_Surface* apply_rotation_d_continu(SDL_Surface* src, float angle, float lambda, float t, Complex z_0) {
+    // Create a temporary converted surface if needed
+    SDL_Surface* converted_src = NULL;
+    SDL_Surface* working_src = src;
+    
+    // Convert to RGBA32 if not already in that format
+    if (src->format->format != SDL_PIXELFORMAT_RGBA32) {
+        converted_src = SDL_ConvertSurfaceFormat(src, SDL_PIXELFORMAT_RGBA32, 0);
+        if (!converted_src) {
+            printf("Error converting surface format: %s\n", SDL_GetError());
+            return NULL;
+        }
+        working_src = converted_src;
+    }
+
+    // Create destination surface (same format as working source)
+    SDL_Surface* dest = SDL_CreateRGBSurfaceWithFormat(0, working_src->w, working_src->h, 
+                                                      working_src->format->BitsPerPixel, 
+                                                      working_src->format->format);
+    if (!dest) {
+        printf("Error creating destination surface: %s\n", SDL_GetError());
+        if (converted_src) SDL_FreeSurface(converted_src);
+        return NULL;
+    }
+
+    // Lock surfaces if needed
+    if (SDL_MUSTLOCK(working_src)) SDL_LockSurface(working_src);
+    if (SDL_MUSTLOCK(dest)) SDL_LockSurface(dest);
+
+    // Get pixel access information
+    const int src_bpp = working_src->format->BytesPerPixel;
+    const int dest_bpp = dest->format->BytesPerPixel;
+    Uint8* src_pixels = (Uint8*)working_src->pixels;
+    Uint8* dest_pixels = (Uint8*)dest->pixels;
+
+    // Process each pixel
+    for (int y = 0; y < dest->h; y++) { 
+        for (int x = 0; x < dest->w; x++) {
+            Complex z_dest = coordonnee_image_vers_complexe(x, y);
+            Complex z_src = rotation_inverse_d_continu(z_dest, z_0, angle, lambda, t);
+            
+            int x_src = 0, y_src = 0;
+            complexe_vers_coordonnee_image(z_src, &x_src, &y_src);
+
+            // Calculate memory positions
+            Uint8* dest_p = dest_pixels + y * dest->pitch + x * dest_bpp;
+            
+            if (x_src >= 0 && x_src < working_src->w && y_src >= 0 && y_src < working_src->h) {
+                Uint8* src_p = src_pixels + y_src * working_src->pitch + x_src * src_bpp;
+                memcpy(dest_p, src_p, src_bpp);
+            } else {
+                // Set to transparent black (0) for out-of-bounds
+                memset(dest_p, 0, dest_bpp);
+            }
+        }
+    }
+
+    // Unlock surfaces
+    if (SDL_MUSTLOCK(dest)) SDL_UnlockSurface(dest);
+    if (SDL_MUSTLOCK(working_src)) SDL_UnlockSurface(working_src);
+
+    // Free the temporary converted surface if we created one
+    if (converted_src) {
+        SDL_FreeSurface(converted_src);
+    }
+
+    return dest;
+}
 
 SDL_Surface* apply_rotation_d(SDL_Surface* src, float angle, float d0, float d1, float d_max, Complex z_0) {
     // Create a temporary converted surface if needed

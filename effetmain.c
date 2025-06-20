@@ -38,6 +38,9 @@ int main(int argc, char * argv[]) {
         return 0;
     }
 
+    float scaleX = (float)current_surf->w  / window_dimensions.w;
+    float scaleY = (float)current_surf->h  / window_dimensions.h;
+
     SDL_Rect src = {0, 0, current_surf->w, current_surf->h};
     SDL_Rect dst = window_dimensions;
 
@@ -70,8 +73,8 @@ int main(int argc, char * argv[]) {
                     break;
                 case SDL_MOUSEBUTTONDOWN:
                     
-                    z_0.re = event.button.x;
-                    z_0.im = event.button.y;
+                    z_0.re = event.button.x * scaleX;
+                    z_0.im = event.button.y * scaleY;
                     printf("New transformation center: %.1f, %.1f\n", z_0.re, z_0.im);
                     break;
                     
@@ -105,11 +108,13 @@ int main(int argc, char * argv[]) {
                             break;
                         case SDLK_RIGHT:
                             printf("part right rotation\n");
-                            new_surf = apply_rotation_d(current_surf, -angle_step, d0, d1, d_max, z_0);
+                            //new_surf = apply_rotation_d(current_surf, -angle_step, d0, d1, d_max, z_0);
+                            new_surf = apply_rotation_d_continu(current_surf, -angle_step, 0.5f, d1, z_0);
                             break;
                         case SDLK_LEFT:
                             printf("part left rotation\n");
-                            new_surf = apply_rotation_d(current_surf, angle_step, d0, d1, d_max, z_0);
+                            //new_surf = apply_rotation_d(current_surf, angle_step, d0, d1, d_max, z_0);
+                            new_surf = apply_rotation_d_continu(current_surf, angle_step, 0.5f, d1, z_0);
                             break;
                         case SDLK_e:
                             printf("total right rotation\n");

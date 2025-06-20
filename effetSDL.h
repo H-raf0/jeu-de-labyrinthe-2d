@@ -23,5 +23,9 @@ SDL_Surface* apply_zoom_partiel(SDL_Surface* src, float alpha, Complex z0, float
 SDL_Surface * apply_zoom(SDL_Surface* src, float alpha, Complex z_0);
 SDL_Surface* apply_rotation(SDL_Surface* src, float angle, Complex z_0);
 SDL_Surface* apply_rotation_d(SDL_Surface* src, float angle, float d0, float d1, float d_max, Complex z_0);
+Complex rotation_inverse_d_continu(Complex z_prime, Complex z0, float theta0, float lambda, float T);
+SDL_Surface* apply_rotation_d_continu(SDL_Surface* src, float angle, float lambda, float t, Complex z_0);
+
+
 
 #endif
