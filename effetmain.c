@@ -109,12 +109,12 @@ int main(int argc, char * argv[]) {
                         case SDLK_RIGHT:
                             printf("part right rotation\n");
                             //new_surf = apply_rotation_d(current_surf, -angle_step, d0, d1, d_max, z_0);
-                            new_surf = apply_rotation_d_continu(current_surf, -angle_step, 0.5f, d1, z_0);
+                            new_surf = apply_rotation_d_continu(current_surf, -angle_step, 0.1f, d1, z_0);
                             break;
                         case SDLK_LEFT:
                             printf("part left rotation\n");
                             //new_surf = apply_rotation_d(current_surf, angle_step, d0, d1, d_max, z_0);
-                            new_surf = apply_rotation_d_continu(current_surf, angle_step, 0.5f, d1, z_0);
+                            new_surf = apply_rotation_d_continu(current_surf, angle_step, 0.1f, d1, z_0);
                             break;
                         case SDLK_e:
                             printf("total right rotation\n");

@@ -444,7 +444,10 @@ Complex rotation_inverse_d_continu(Complex z_prime, Complex z0, float theta0, fl
 
     // θ(z) = θ₀ × exp(-|z| / K)
     float angle = theta0 * exp(-mod_z / K);
-
+    
+    // ?
+    if (fabs(angle) < 1e-2) angle = 0;
+    
     return rotation_img(z_prime, z0, angle);
 }
 
