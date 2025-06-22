@@ -258,6 +258,9 @@ int main() {
     srand(time(NULL));
     int n = 12;
     float proba = 0.2;
+    int **mat = matrice_adj(n, proba);
+    afficher_matrice(mat, n);
+
 
     Graphe *g = generer_graphe_aretes(n, proba);
     Partition *p = creer_partition(n);
@@ -265,6 +268,7 @@ int main() {
     composantes_connexes_aretes(g, p);
     afficher_composantes(p);
     afficher_nombres_composantes(p);
+    ecrire_composantes_dot("composantes.dot",mat,n,p);
     ecrire_graphe_aretes_dot("graphe_aretes.dot", g);
 
     // Nettoyage
