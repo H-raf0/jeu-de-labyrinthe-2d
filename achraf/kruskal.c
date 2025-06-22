@@ -6,9 +6,9 @@
 #include <SDL2/SDL_image.h>
 
 
-#define TUILE_TAILLE 48 // Taille des tuiles dans l'image PNG (par exemple 16x16)
+#define TUILE_TAILLE 16 // Taille des tuiles dans l'image PNG (par exemple 16x16)
 
-#define TAILLE_CELLULE 100 // Taille graphique d'une cellule dans SDL
+#define TAILLE_CELLULE 50 // Taille graphique d'une cellule dans SDL
 
 // Structure représentant une partition (ensemble disjoint)
 typedef struct {
@@ -21,6 +21,27 @@ typedef struct {
 typedef struct {
     int u, v; // les deux cellules connectées
 } arete;
+
+
+SDL_Rect src_murs[16] = {
+    {1 * TUILE_TAILLE, 1 * TUILE_TAILLE, TUILE_TAILLE, TUILE_TAILLE}, // 0 : rien
+    {1 * TUILE_TAILLE, 0 * TUILE_TAILLE, TUILE_TAILLE, TUILE_TAILLE}, // 1 : haut
+    {2 * TUILE_TAILLE, 1 * TUILE_TAILLE, TUILE_TAILLE, TUILE_TAILLE}, // 2 : droite
+    {2 * TUILE_TAILLE, 0 * TUILE_TAILLE, TUILE_TAILLE, TUILE_TAILLE}, // 3 : haut + droite
+    {1 * TUILE_TAILLE, 2 * TUILE_TAILLE, TUILE_TAILLE, TUILE_TAILLE}, // 4 : bas
+    {7 * TUILE_TAILLE, 4 * TUILE_TAILLE, TUILE_TAILLE, TUILE_TAILLE}, // 5 : haut + bas
+    {2 * TUILE_TAILLE, 2 * TUILE_TAILLE, TUILE_TAILLE, TUILE_TAILLE}, // 6 : droite + bas
+    {8 * TUILE_TAILLE, 4 * TUILE_TAILLE, TUILE_TAILLE, TUILE_TAILLE}, // 7 : haut + droite + bas
+    {0 * TUILE_TAILLE, 1 * TUILE_TAILLE, TUILE_TAILLE, TUILE_TAILLE}, // 8 : gauche
+    {0 * TUILE_TAILLE, 0 * TUILE_TAILLE, TUILE_TAILLE, TUILE_TAILLE}, // 9 : haut + gauche
+    {8 * TUILE_TAILLE, 2 * TUILE_TAILLE, TUILE_TAILLE, TUILE_TAILLE}, // 10 : droite + gauche
+    {8 * TUILE_TAILLE, 1 * TUILE_TAILLE, TUILE_TAILLE, TUILE_TAILLE}, // 11 : haut + droite + gauche
+    {0 * TUILE_TAILLE, 2 * TUILE_TAILLE, TUILE_TAILLE, TUILE_TAILLE}, // 12 : bas + gauche
+    {6 * TUILE_TAILLE, 4 * TUILE_TAILLE, TUILE_TAILLE, TUILE_TAILLE}, // 13 : haut + bas + gauche
+    {8 * TUILE_TAILLE, 3 * TUILE_TAILLE, TUILE_TAILLE, TUILE_TAILLE}, // 14 : droite + bas + gauche
+    {7 * TUILE_TAILLE, 3 * TUILE_TAILLE, TUILE_TAILLE, TUILE_TAILLE}  // 15 : tous les murs
+};
+
 
 // Initialise une partition de taille 'total'
 void init_partition(partition* p, int total) {
@@ -230,68 +251,19 @@ void afficher_labyrinthe_sdl(arete arbre[], int nb_aretes, int lignes, int colon
 }
 
 
-
-
 // Ajoute les bordures hautes et gauches dans la fonction dessiner_tuile
-void dessiner_tuile(SDL_Renderer* rendu, SDL_Texture* tileset, int val_murs, int x, int y) {
+void dessiner_tuile(SDL_Renderer* rendu, SDL_Texture* tileset, int* murs, int x, int y, int colonnes) {
     SDL_Rect dst;
     SDL_Rect src;
+    int val_murs = murs[y * colonnes + x];
+    src = src_murs[val_murs];
 
-    if ((val_murs & 1) && y==0) { // Mur en haut
-        src.x = 2 * TUILE_TAILLE;
-        src.y = TUILE_TAILLE + TUILE_TAILLE / 3;
-        src.w = TUILE_TAILLE;
-        src.h = TUILE_TAILLE / 3;
-
-        dst.x = x * TAILLE_CELLULE;
-        dst.y = y * TAILLE_CELLULE;
-        dst.w = TAILLE_CELLULE;
-        dst.h = TAILLE_CELLULE / 3;
-
-        SDL_RenderCopy(rendu, tileset, &src, &dst);
-    }
-
-    if (val_murs & 2) { // Mur à droite
-        src.x = 2 * TUILE_TAILLE + 2 * TUILE_TAILLE / 3;
-        src.y = TUILE_TAILLE / 3;
-        src.w = TUILE_TAILLE / 3;
-        src.h = TUILE_TAILLE;
-
-        dst.x = x * TAILLE_CELLULE + TAILLE_CELLULE * 5 / 6;
-        dst.y = y * TAILLE_CELLULE;
-        dst.w = TAILLE_CELLULE / 3;
-        dst.h = TAILLE_CELLULE;
-
-        SDL_RenderCopy(rendu, tileset, &src, &dst);
-    }
-
-    if (val_murs & 4) { // Mur en bas
-        src.x = 2 * TUILE_TAILLE;
-        src.y = TUILE_TAILLE + TUILE_TAILLE / 3;
-        src.w = TUILE_TAILLE;
-        src.h = TUILE_TAILLE / 3;
-
-        dst.x = x * TAILLE_CELLULE;
-        dst.y = y * TAILLE_CELLULE + TAILLE_CELLULE * 5 / 6;
-        dst.w = TAILLE_CELLULE;
-        dst.h = TAILLE_CELLULE / 3;
-
-        SDL_RenderCopy(rendu, tileset, &src, &dst);
-    }
-
-    if ((val_murs & 8) && x==0) { // Mur à gauche
-        src.x = 2 * TUILE_TAILLE + 2 * TUILE_TAILLE / 3;
-        src.y = TUILE_TAILLE / 3;
-        src.w = TUILE_TAILLE / 3;
-        src.h = TUILE_TAILLE;
-
-        dst.x = x * TAILLE_CELLULE;
-        dst.y = y * TAILLE_CELLULE;
-        dst.w = TAILLE_CELLULE / 3;
-        dst.h = TAILLE_CELLULE;
-
-        SDL_RenderCopy(rendu, tileset, &src, &dst);
-    }
+    dst.x = x * TAILLE_CELLULE;
+    dst.y = y * TAILLE_CELLULE;
+    dst.w = TAILLE_CELLULE;
+    dst.h = TAILLE_CELLULE;
+    
+    SDL_RenderCopy(rendu, tileset, &src, &dst);
 }
 
 
@@ -331,22 +303,13 @@ void afficher_labyrinthe_sdl_tuiles(int *murs, int lignes, int colonnes) {
     SDL_SetRenderDrawColor(rendu, 0, 0, 0, 255);
     SDL_RenderClear(rendu);
 
-    // initialisation du arriere plan
-    
-    SDL_Rect src = { 1 * TUILE_TAILLE, 0 * TUILE_TAILLE, TUILE_TAILLE, TUILE_TAILLE };
-    for (int y = 0; y < lignes; y++) {
+
+    for (int y = 0; y < lignes ; y++) {
         for (int x = 0; x < colonnes; x++) {
-            SDL_Rect dst = { x * TAILLE_CELLULE, y * TAILLE_CELLULE, TAILLE_CELLULE, TAILLE_CELLULE };
-            SDL_RenderCopy(rendu, tileset, &src, &dst);
+            dessiner_tuile(rendu, tileset, murs, x, y, colonnes);
         }
     }
 
-    for (int y = 0; y < lignes; y++) {
-        for (int x = 0; x < colonnes; x++) {
-            int val = murs[y * colonnes + x];
-            dessiner_tuile(rendu, tileset, val, x, y);
-        }
-    }
 
     SDL_RenderPresent(rendu);
     SDL_Event e;

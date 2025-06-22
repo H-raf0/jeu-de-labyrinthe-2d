@@ -9,7 +9,32 @@ flying_dragon-1.1/
 sprite
 exec
 test.c
-
+acm.dot
+acm.png
+arbre.dot
+composantes.dot
+composantes.png
+graphe.dot
+graphe.png
+graphe_aretes.dot
+graphe_aretes.png
+jeudi.c
+laby.c
+../ilyas/fenetre_essai2
+../ilyas/sprite2
+../img3.png
+../img4.png
+../img5.png
+../temp.c
+../ilyas/animation
+modified:   ../ilyas/fenetre_essai
+modified:   ../ilyas/kruksal.c
+modified:   ../ilyas/sprite
+modified:   ../zidhimen/manipfenetre
+modified:   ../zidhimen/rendu
+modified:   ../zidhimen/spritee
+../ilyas
+../zidhimen
 # Prerequisites
 *.d
 
