@@ -5,7 +5,7 @@
 #include "laby.h"
 #include "labySDL.h"
 
-#define CURRENT_ALGO 0
+#define CURRENT_ALGO 2
 // 0 BFS, 1 DIJSKTRA, 2 A*
 #define VITESSE 0.2f
 
@@ -116,6 +116,8 @@ void lancer_animation_labyrinthe(int* murs, int lignes, int colonnes) {
         SDL_RenderPresent(rendu);
     }
 
+    if (CURRENT_ALGO == 2) comparer_heuristiques_A_etoile(murs, lignes, colonnes, depart, destination);
+
     // --- Nettoyage ---
     printf("Libération de la matrice d'adjacence...\n");
     liberer_matrice_adjacence(graphe, nb_cellules);
@@ -147,8 +149,6 @@ int main() {
     for (int i = 0; i < nb_cellules; i++) murs[i] = 1 | 2 | 4 | 8;
     for (int i = 0; i < nb_aretes_arbre; i++) supprimer_mur(murs, colonnes, arbre[i].u, arbre[i].v);
     free(arbre);
-    
-
 
     // --- Lancement de l'application ---
     lancer_animation_labyrinthe(murs, lignes, colonnes);

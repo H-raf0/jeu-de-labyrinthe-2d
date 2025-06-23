@@ -630,7 +630,7 @@ int A_etoile_laby(int *murs, int lignes, int colonnes, int depart, int destinati
     return noeuds_visites;
 }
 
-// MODIF A*: Fonction pour comparer les heuristiques
+// Fonction pour comparer les heuristiques
 void comparer_heuristiques_A_etoile(int* murs, int lignes, int colonnes, int depart, int destination) {
     noeud n;
     int nb_cellules = lignes * colonnes;
