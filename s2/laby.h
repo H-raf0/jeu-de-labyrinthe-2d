@@ -52,8 +52,13 @@ void A_etoile(int graphe[N][N], int depart, int arrivee, int positions[N][2]); /
 void BFS_laby(int *murs, int lignes, int colonnes, int origine, noeud* n);
 void Dijkstra_laby(int** graphe, int nb_cellules, int destination, noeud* n);
 
-int reconstruire_chemin(noeud* n, int depart, int destination, int* chemin_buffer);
+int A_etoile_laby(int *murs, int lignes, int colonnes, int depart, int destination, noeud* n, int type_heuristique);
+void comparer_heuristiques_A_etoile(int* murs, int lignes, int colonnes, int depart, int destination);
 
+
+
+int reconstruire_chemin(noeud* n, int depart, int destination, int* chemin_buffer);
+int reconstruire_chemin_inverse(noeud* n, int depart, int destination, int nb_cellules, int* chemin_buffer);
 //================== Affichage ===============================
 void afficher_labyrinthe_unicode(int *murs, int lignes, int colonnes);
 

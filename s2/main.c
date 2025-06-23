@@ -5,9 +5,11 @@
 #include "laby.h"
 #include "labySDL.h"
 
-#define CURRENT_ALGO 1
+#define CURRENT_ALGO 0
 // 0 BFS, 1 DIJSKTRA, 2 A*
 #define VITESSE 0.2f
+
+#define CURRENT_HEURISTIC HEURISTIC_MANHATTAN // HEURISTIC_MANHATTAN ou HEURISTIC_EUCLIDEAN ou HEURISTIC_TCHEBYCHEV
 
 void lancer_animation_labyrinthe(int* murs, int lignes, int colonnes) {
     int nb_cellules = lignes * colonnes;
@@ -42,7 +44,14 @@ void lancer_animation_labyrinthe(int* murs, int lignes, int colonnes) {
     // Calculer le premier chemin
     if(CURRENT_ALGO == 0) BFS_laby(murs, lignes, colonnes, destination, &n);
     else if (CURRENT_ALGO == 1) Dijkstra_laby(graphe, nb_cellules, destination, &n);
-    nb_etapes = reconstruire_chemin(&n, depart, destination, chemin);
+    else if (CURRENT_ALGO == 2) A_etoile_laby(murs, lignes, colonnes, depart, destination, &n, CURRENT_HEURISTIC);
+    else printf("option inconnu\n");
+
+    if (CURRENT_ALGO == 2) { // A* cherche depuis le départ
+        nb_etapes = reconstruire_chemin_inverse(&n, depart, destination, nb_cellules, chemin);
+    } else { // BFS et Dijkstra cherchent depuis la destination
+        nb_etapes = reconstruire_chemin(&n, depart, destination, chemin);
+    }
     etape_actuelle = 0;
     perso_x = (depart % colonnes) * TAILLE_CELLULE + TAILLE_CELLULE / 2.0f;
     perso_y = (depart / colonnes) * TAILLE_CELLULE + TAILLE_CELLULE / 2.0f;
@@ -83,9 +92,14 @@ void lancer_animation_labyrinthe(int* murs, int lignes, int colonnes) {
             // --- APPEL DE L'ALGORITHME CHOISI ---
             if(CURRENT_ALGO == 0) BFS_laby(murs, lignes, colonnes, destination, &n);
             else if (CURRENT_ALGO == 1) Dijkstra_laby(graphe, nb_cellules, destination, &n);
+            else if (CURRENT_ALGO == 2) A_etoile_laby(murs, lignes, colonnes, depart, destination, &n, CURRENT_HEURISTIC);
             else printf("option inconnu\n");
 
-            nb_etapes = reconstruire_chemin(&n, depart, destination, chemin);
+            if (CURRENT_ALGO == 2) {
+                nb_etapes = reconstruire_chemin_inverse(&n, depart, destination, nb_cellules, chemin);
+            } else {
+                nb_etapes = reconstruire_chemin(&n, depart, destination, chemin);
+            }
             etape_actuelle = 0;
         }
 
@@ -93,8 +107,7 @@ void lancer_animation_labyrinthe(int* murs, int lignes, int colonnes) {
         SDL_SetRenderDrawColor(rendu, 0, 0, 0, 255);
         SDL_RenderClear(rendu);
         
-        dessiner_fond_bfs(rendu, &n, lignes, colonnes);
-        dessiner_noeuds_explores(rendu, &n, lignes, colonnes);
+        dessiner_fond(rendu, &n, lignes, colonnes);
         dessiner_chemin(rendu, chemin, nb_etapes, colonnes);
         SDL_SetRenderDrawColor(rendu, 255, 255, 255, 255);
         for (int i = 0; i < nb_cellules; i++) dessiner_murs(rendu, i % colonnes, i / colonnes, murs, colonnes);

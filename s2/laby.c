@@ -493,3 +493,164 @@ int reconstruire_chemin(noeud* n, int depart, int destination, int* chemin_buffe
     
     return etapes;
 }
+
+int reconstruire_chemin_inverse(noeud* n, int depart, int destination, int nb_cellules, int* chemin_buffer) {
+    // Pour A*, la recherche part de `depart`, donc on vérifie si `destination` a été atteinte.
+    if (n->parent[destination] == -1 && depart != destination) {
+        printf("Avertissement : Pas de chemin trouvé entre %d et %d\n", depart, destination);
+        return 0; // Pas de chemin
+    }
+
+    int* chemin_temp = malloc(sizeof(int) * nb_cellules);
+    if (!chemin_temp) return 0;
+
+    int etapes = 0;
+    int courant = destination;
+
+    // On suit les parents depuis la destination jusqu'à atteindre le départ.
+    while (courant != -1) {
+        chemin_temp[etapes++] = courant;
+        if (courant == depart) break; // On a atteint le début, on s'arrête.
+        courant = n->parent[courant];
+        
+        // Sécurité pour les cas où le chemin serait cassé pour une autre raison
+        if (etapes >= nb_cellules) {
+             fprintf(stderr, "Erreur: Boucle infinie détectée dans reconstruire_chemin_inverse.\n");
+             free(chemin_temp);
+             return 0;
+        }
+    }
+    
+    // Si la boucle s'est terminée sans trouver le départ, il y a un problème.
+    if (courant != depart) {
+        fprintf(stderr, "Erreur: Chemin cassé (inverse), impossible de remonter de %d à %d.\n", destination, depart);
+        free(chemin_temp);
+        return 0;
+    }
+
+
+    // Le chemin est dans chemin_temp dans l'ordre inverse (destination -> depart).
+    // On le copie dans le buffer final dans le bon ordre (depart -> destination).
+    for (int i = 0; i < etapes; i++) {
+        chemin_buffer[i] = chemin_temp[etapes - 1 - i];
+    }
+
+    free(chemin_temp);
+    return etapes;
+}
+
+int A_etoile_laby(int *murs, int lignes, int colonnes, int depart, int destination, noeud* n, int type_heuristique) {
+    int nb_cellules = lignes * colonnes;
+    int *g_costs = malloc(sizeof(int) * nb_cellules); // Tableau pour les coûts g(n)
+
+    if (!g_costs) {
+        fprintf(stderr, "Allocation échouée pour g_costs dans A*\n");
+        return -1;
+    }
+
+    // Initialisation
+    initialiser_noeuds(n, depart, nb_cellules); // n->distance stockera f(n)
+    for (int i = 0; i < nb_cellules; i++) {
+        g_costs[i] = INF;
+    }
+
+    g_costs[depart] = 0;
+    
+    int x_dest, y_dest;
+    indice_vers_coord(destination, colonnes, &x_dest, &y_dest);
+    int x_depart, y_depart;
+    indice_vers_coord(depart, colonnes, &x_depart, &y_depart);
+    
+    // Le f_score du départ est juste l'heuristique (car g=0)
+    n->distance[depart] = estimation(x_depart, x_dest, y_depart, y_dest, type_heuristique);
+
+    // Initialisation du tas (file de priorité)
+    tas open_set;
+    open_set.tab = malloc(sizeof(int) * nb_cellules);
+    open_set.taille = 0;
+    inserer(&open_set, depart, n);
+
+    int noeuds_visites = 0;
+
+    while (open_set.taille > 0) {
+        int u = extraire_min(&open_set, n);
+        noeuds_visites++;
+
+        if (u == destination) {
+            free(g_costs);
+            free(open_set.tab);
+            return noeuds_visites; // Chemin trouvé
+        }
+
+        // n->visite agit comme le "closed set" pour éviter de traiter un noeud plusieurs fois
+        n->visite[u] = 1;
+
+        int x_u, y_u;
+        indice_vers_coord(u, colonnes, &x_u, &y_u);
+
+        // Explorer les voisins
+        int voisins[4];
+        int nb_voisins = 0;
+        if (y_u > 0 && !(murs[u] & 1)) voisins[nb_voisins++] = (y_u - 1) * colonnes + x_u; // Haut
+        if (x_u < colonnes - 1 && !(murs[u] & 2)) voisins[nb_voisins++] = y_u * colonnes + (x_u + 1); // Droite
+        if (y_u < lignes - 1 && !(murs[u] & 4)) voisins[nb_voisins++] = (y_u + 1) * colonnes + x_u; // Bas
+        if (x_u > 0 && !(murs[u] & 8)) voisins[nb_voisins++] = y_u * colonnes + (x_u - 1); // Gauche
+
+        for (int i = 0; i < nb_voisins; i++) {
+            int v = voisins[i];
+            
+            if (n->visite[v]) continue; // Déjà dans le closed set
+
+            // Le coût pour se déplacer à un voisin est de 1 dans un labyrinthe non-pondéré
+            int tentative_g = g_costs[u] + 1;
+
+            if (tentative_g < g_costs[v]) {
+                // Ce chemin vers v est meilleur que le précédent
+                n->parent[v] = u;
+                g_costs[v] = tentative_g;
+
+                int x_v, y_v;
+                indice_vers_coord(v, colonnes, &x_v, &y_v);
+                int h_cost = estimation(x_v, x_dest, y_v, y_dest, type_heuristique);
+                
+                n->distance[v] = g_costs[v] + h_cost; // n->distance est notre f_score
+                
+                // On insère v dans le tas. Si v y est déjà, le tas n'est pas mis à jour
+                // mais la prochaine extraction prendra le v avec le f_score le plus bas.
+                // Pour une implémentation parfaite, il faudrait une fonction "decrease_key".
+                // Mais pour ce cas, ré-insérer est simple et fonctionnel.
+                inserer(&open_set, v, n);
+            }
+        }
+    }
+
+    // Pas de chemin trouvé
+    free(g_costs);
+    free(open_set.tab);
+    return noeuds_visites;
+}
+
+// MODIF A*: Fonction pour comparer les heuristiques
+void comparer_heuristiques_A_etoile(int* murs, int lignes, int colonnes, int depart, int destination) {
+    noeud n;
+    int nb_cellules = lignes * colonnes;
+    int noeuds_visites;
+
+    printf("\n--- Comparaison des Heuristiques A* pour le trajet %d -> %d ---\n", depart, destination);
+
+    // 1. Distance de Manhattan
+    noeuds_visites = A_etoile_laby(murs, lignes, colonnes, depart, destination, &n, HEURISTIC_MANHATTAN);
+    printf("Heuristique MANHATTAN : %d noeuds visités.\n", noeuds_visites);
+    free_noeuds(&n);
+
+    // 2. Distance Euclidienne
+    noeuds_visites = A_etoile_laby(murs, lignes, colonnes, depart, destination, &n, HEURISTIC_EUCLIDEAN);
+    printf("Heuristique EUCLIDIENNE : %d noeuds visités.\n", noeuds_visites);
+    free_noeuds(&n);
+
+    // 3. Distance de Tchebychev
+    noeuds_visites = A_etoile_laby(murs, lignes, colonnes, depart, destination, &n, HEURISTIC_TCHEBYCHEV);
+    printf("Heuristique TCHEBYCHEV: %d noeuds visités.\n", noeuds_visites);
+    free_noeuds(&n);
+    printf("-----------------------------------------------------------------\n\n");
+}

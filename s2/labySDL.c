@@ -258,7 +258,8 @@ void afficher_labyrinthe_resolu_sdl(int *murs, int lignes, int colonnes, int dep
     SDL_Quit();
 }
 
-void dessiner_fond_bfs(SDL_Renderer* rendu, noeud* n, int lignes, int colonnes) {
+
+void dessiner_fond(SDL_Renderer* rendu, noeud* n, int lignes, int colonnes) {
     int max_dist = 0;
     for (int i = 0; i < lignes * colonnes; i++) {
         if (n->distance[i] > max_dist) max_dist = n->distance[i];
@@ -312,45 +313,6 @@ void dessiner_personnage(SDL_Renderer* rendu, SDL_Texture* perso_texture, float 
     SDL_RenderCopy(rendu, perso_texture, NULL, &dst_rect);
 }
 
-void dessiner_noeuds_explores(SDL_Renderer* rendu, noeud* n, int lignes, int colonnes) {
-    // 1. Définir une couleur fixe pour toutes les lignes d'exploration.
-    // Un bleu-vert (cyan) est un excellent choix sur un fond noir/bleu foncé.
-    const Uint8 R_COULEUR = 0;
-    const Uint8 G_COULEUR = 200;
-    const Uint8 B_COULEUR = 255;
-    const Uint8 A_COULEUR = 150; // Transparence pour un effet de "lueur"
 
-    // 2. Activer le blending pour que les lignes qui se superposent s'illuminent.
-    SDL_SetRenderDrawBlendMode(rendu, SDL_BLENDMODE_BLEND);
-    SDL_SetRenderDrawColor(rendu, R_COULEUR, G_COULEUR, B_COULEUR, A_COULEUR);
 
-    // 3. Parcourir toutes les cellules.
-    for (int i = 0; i < lignes * colonnes; i++) {
-        // Si la cellule 'i' a été découverte et a un parent
-        if (n->parent[i] != -1) {
-            int parent_idx = n->parent[i];
-
-            // Calcul des coordonnées des centres
-            int x_enfant, y_enfant, x_parent, y_parent;
-            indice_vers_coord(i, colonnes, &x_enfant, &y_enfant);
-            indice_vers_coord(parent_idx, colonnes, &x_parent, &y_parent);
-            int centre_x_enfant = x_enfant * TAILLE_CELLULE + TAILLE_CELLULE / 2;
-            int centre_y_enfant = y_enfant * TAILLE_CELLULE + TAILLE_CELLULE / 2;
-            int centre_x_parent = x_parent * TAILLE_CELLULE + TAILLE_CELLULE / 2;
-            int centre_y_parent = y_parent * TAILLE_CELLULE + TAILLE_CELLULE / 2;
-            
-            // Dessiner la ligne centrale
-            SDL_RenderDrawLine(rendu, centre_x_enfant, centre_y_enfant, centre_x_parent, centre_y_parent);
-            
-            // Dessiner les lignes décalées pour l'épaisseur
-            SDL_RenderDrawLine(rendu, centre_x_enfant - 1, centre_y_enfant, centre_x_parent - 1, centre_y_parent);
-            SDL_RenderDrawLine(rendu, centre_x_enfant + 1, centre_y_enfant, centre_x_parent + 1, centre_y_parent);
-            SDL_RenderDrawLine(rendu, centre_x_enfant, centre_y_enfant - 1, centre_x_parent, centre_y_parent - 1);
-            SDL_RenderDrawLine(rendu, centre_x_enfant, centre_y_enfant + 1, centre_x_parent, centre_y_parent + 1);
-        }
-    }
-
-    // 4. Désactiver le blend mode.
-    SDL_SetRenderDrawBlendMode(rendu, SDL_BLENDMODE_NONE);
-}
 // ======================================================= fin Sdl ========================================

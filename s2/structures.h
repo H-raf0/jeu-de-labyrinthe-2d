@@ -8,8 +8,13 @@
 #include <math.h>
 #include <limits.h>
 
-#define N 8
+#define N 8   // ?
 #define INF INT_MAX
+
+// A* les types d'heuristique
+#define HEURISTIC_MANHATTAN 0
+#define HEURISTIC_EUCLIDEAN 1
+#define HEURISTIC_TCHEBYCHEV 2
 
 //structures:
 

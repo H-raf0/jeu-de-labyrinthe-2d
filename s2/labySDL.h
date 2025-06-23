@@ -24,17 +24,13 @@ void afficher_labyrinthe_sdl_tuiles(int *murs, int lignes, int colonnes);
 
 
 // Fonctions de dessin modulaires pour l'animation
-void dessiner_fond_bfs(SDL_Renderer* rendu, noeud* n, int lignes, int colonnes);
+void dessiner_fond(SDL_Renderer* rendu, noeud* n, int lignes, int colonnes);
 void dessiner_chemin(SDL_Renderer* rendu, int* chemin, int nb_etapes, int colonnes);
 void dessiner_personnage(SDL_Renderer* rendu, SDL_Texture* perso_texture, float x_pixel, float y_pixel);
 void dessiner_marqueurs(SDL_Renderer* rendu, int depart, int destination, int colonnes);
 
 //================== Affichage SDL avec solution =================
 void afficher_labyrinthe_resolu_sdl(int *murs, int lignes, int colonnes, int depart, int destination);
-
-void dessiner_noeuds_explores(SDL_Renderer* rendu, noeud* n, int lignes, int colonnes);
-//void dessiner_couts(SDL_Renderer* rendu, int* couts, int lignes, int colonnes);
-
 
 
 
