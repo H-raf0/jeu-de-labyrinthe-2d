@@ -22,4 +22,14 @@ void afficher_labyrinthe_sdl(arete arbre[], int nb_aretes, int lignes, int colon
 void dessiner_tuile(SDL_Renderer* rendu, SDL_Texture* tileset, int* murs, int x, int y, int colonnes);
 void afficher_labyrinthe_sdl_tuiles(int *murs, int lignes, int colonnes);
 
+
+
+//================== Affichage SDL avec solution =================
+void afficher_labyrinthe_resolu_sdl(int *murs, int lignes, int colonnes, int depart, int destination);
+
+
+
+
+
+
 #endif

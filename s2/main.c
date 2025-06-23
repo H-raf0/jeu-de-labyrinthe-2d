@@ -6,7 +6,63 @@
 #include "labySDL.h"
 
 
+// main.c
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include "laby.h"
+#include "labySDL.h"
+
+int main(int argc, char* argv[]) {
+    srand(time(NULL));
+
+    // Définir la taille du labyrinthe
+    int lignes = 20;
+    int colonnes = 30;
+    int nb_cellules = lignes * colonnes;
+
+    // 1. Génération du labyrinthe (votre code existant)
+    arete *toutes_aretes;
+    int nb_total_aretes = generation_grille_vide(&toutes_aretes, lignes, colonnes);
+    
+    fisher_yates(toutes_aretes, nb_total_aretes);
+
+    arete *arbre = malloc(sizeof(arete) * (nb_cellules - 1));
+    int nb_aretes_arbre;
+    construire_arbre_couvrant(toutes_aretes, nb_total_aretes, arbre, &nb_aretes_arbre, nb_cellules);
+    
+    free(toutes_aretes);
+
+    // Créer la représentation avec les murs
+    int *murs = malloc(sizeof(int) * nb_cellules);
+    for (int i = 0; i < nb_cellules; i++) {
+        murs[i] = 1 | 2 | 4 | 8; // Tous les murs sont présents au début
+    }
+    for (int i = 0; i < nb_aretes_arbre; i++) {
+        supprimer_mur(murs, colonnes, arbre[i].u, arbre[i].v);
+    }
+    free(arbre);
+    
+    // Définir le point de départ et d'arrivée
+    int depart = 0; // Coin supérieur gauche
+    int destination = nb_cellules - 1; // Coin inférieur droit
+
+    // 2. Afficher le labyrinthe résolu avec SDL
+    printf("Affichage du labyrinthe résolu avec le chemin et le dégradé de distance...\n");
+    afficher_labyrinthe_resolu_sdl(murs, lignes, colonnes, depart, destination);
+    
+    // Libérer la mémoire des murs
+    free(murs);
+
+    printf("Programme terminé.\n");
+    return 0;
+}
+
+
+
+/*
+//affichage seul
 // Fonction principale
 int main(int argc, char* argv[]) {
     if (argc < 4) {
@@ -64,3 +120,4 @@ int main(int argc, char* argv[]) {
     free(murs);
     return 0;
 }
+*/

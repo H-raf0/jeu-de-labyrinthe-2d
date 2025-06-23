@@ -3,6 +3,10 @@
 
 #include "structures.h"
 
+
+
+
+
 // Structure représentant une arête entre deux cellules
 typedef struct {
     int u, v;
@@ -33,9 +37,14 @@ void supprimer_mur(int *murs, int colonnes, int u, int v);
 
 //================== BFS/DIj/A* ==============================
 
+/*
+// à supprimer ???
 void BFS(int m_adj[N][N], int origine,noeud* n);
 void dijkstra(int graphe[N][N], int origine, noeud *n);
 void A_etoile(int graphe[N][N], int depart, int arrivee, int positions[N][2]); //?????
+*/
+//================== Résolution de labyrinthe ====================
+void BFS_laby(int *murs, int lignes, int colonnes, int origine, noeud* n);
 
 //================== Affichage ===============================
 void afficher_labyrinthe_unicode(int *murs, int lignes, int colonnes);

@@ -1,48 +1,67 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdbool.h>
-#include <math.h>
 #include "structures.h"
 
 
 /*----------------------------------------------*/
 //fonctions sur les noeuds:
 
-void initialiser_noeuds(noeud* n,int origine){
-    for(int i=0;i<N;++i){
-        n->visite[i]=0;
-        n->distance[i]=INF;
+void initialiser_noeuds(noeud* n, int origine, int total_noeuds) {
+    n->distance = malloc(sizeof(int) * total_noeuds);
+    n->visite = malloc(sizeof(int) * total_noeuds);
+    n->parent = malloc(sizeof(int) * total_noeuds);
+    if (!n->distance || !n->visite || !n->parent) {
+        fprintf(stderr, "Erreur d'allocation pour noeud\n");
+        exit(EXIT_FAILURE);
     }
-    n->distance[origine]=0;
+
+    for (int i = 0; i < total_noeuds; ++i) {
+        n->visite[i] = 0;
+        n->distance[i] = INF; // Infini
+        n->parent[i] = -1;    // Pas de parent
+    }
+    n->distance[origine] = 0;
+}
+
+void free_noeuds(noeud* n) {
+    free(n->distance);
+    free(n->visite);
+    free(n->parent);
 }
 
 //fonctions sur les files:
 
-void initialiser_file(file * f){
-    f->tete=0;
-    f->queue=0;
-}
-
-int filevide(file *f){
-    return f->tete==f->queue;
-}
-
-void enfiler(file * f , int x){
-    if(f->queue==N){
-        printf("file pleine\n");
-        return;
+void initialiser_file(file * f, int capacite) {
+    f->capacite = capacite;
+    f->tab = malloc(sizeof(int) * f->capacite);
+    if (!f->tab) {
+        fprintf(stderr, "Erreur d'allocation pour file\n");
+        exit(EXIT_FAILURE);
     }
-    f->tab[f->queue]=x;
-    f->queue = (f->queue + 1) % N;
+    f->tete = 0;
+    f->queue = 0;
 }
 
-int defiler(file *f){
-    if(filevide(f)){
-        printf("file vide\n");
-        return 0;
+void free_file(file* f) {
+    free(f->tab);
+}
+
+int filevide(file *f) {
+    return f->tete == f->queue;
+}
+
+void enfiler(file * f, int x) {
+    // Note: cette version simple ne gère pas le "buffer circulaire plein"
+    f->tab[f->queue] = x;
+    f->queue = (f->queue + 1) % f->capacite;
+}
+
+int defiler(file *f) {
+    if(filevide(f)) {
+        return -1; // Ou gérer l'erreur
     }
-    int x=f->tab[f->tete];
-    f->tete = (f->tete + 1) % N;
+    int x = f->tab[f->tete];
+    f->tete = (f->tete + 1) % f->capacite;
     return x;
 }
 

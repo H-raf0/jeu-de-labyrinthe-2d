@@ -8,20 +8,23 @@
 #include <math.h>
 
 #define N 8
-#define INF 9999
+#define INF -1
 
 //structures:
 
-typedef struct noeud{
-    int distance[N];
-    int visite[N];
-}noeud;
+// structures:
+typedef struct {
+    int *distance; // Pointeur pour allocation dynamique
+    int *visite;   // Pointeur pour allocation dynamique
+    int *parent;   // Pointeur pour reconstruire le chemin
+} noeud;
 
-typedef struct file{
-    int tab[N];
+typedef struct {
+    int *tab;      // Pointeur pour allocation dynamique
     int tete;
     int queue;
-}file;
+    int capacite;  // Pour gérer la taille
+} file;
 
 typedef struct tas {
     int tab[N];
@@ -38,17 +41,17 @@ typedef struct avl {
 
 
 
-//fonctions sur les noeuds:
+// fonctions sur les noeuds:
+void initialiser_noeuds(noeud* n, int origine, int total_noeuds);
+void free_noeuds(noeud* n);
 
-void initialiser_noeuds(noeud* n,int origine);
 
-
-//fonctions sur les files:
-
-void initialiser_file(file * f);
+// fonctions sur les files:
+void initialiser_file(file * f, int capacite);
 int filevide(file *f);
 void enfiler(file * f , int x);
 int defiler(file *f);
+void free_file(file* f);
 
 //fonctions sur les tas:
 
@@ -73,9 +76,10 @@ avl* extraire_min_avl(avl *racine, int *sommet);
 int max(int a, int b);
 int estimation(int x1,int x2, int y1, int y2,int type);
 
+/*
 //algorithmes:
 void BFS(int m_adj[N][N], int origine,noeud* n);
 void dijkstra(int graphe[N][N], int origine, noeud *n);
 void A_etoile(int graphe[N][N], int depart, int arrivee, int positions[N][2]);
-
+*/
 #endif

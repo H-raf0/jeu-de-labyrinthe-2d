@@ -196,15 +196,15 @@ void afficher_labyrinthe_unicode(int *murs, int lignes, int colonnes) {
     printf("\n");
 }
 
-
+/*
 
 /**********************************************
                     BFS
-***********************************************/
+*********************************************** /
 void BFS(int m_adj[N][N], int origine,noeud* n){
     file * f = malloc(sizeof(file));
-    initialiser_file(f);
-    initialiser_noeuds(n ,origine);
+    initialiser_file(f); // <--- APPEL INCORRECT
+    initialiser_noeuds(n ,origine); // <--- APPEL INCORRECT
     n->visite[origine]=1;
     enfiler(f,origine);
     while(!filevide(f)){
@@ -220,14 +220,13 @@ void BFS(int m_adj[N][N], int origine,noeud* n){
     free(f);
 }
 
-
 /**********************************************
                 DIJKSTRA    
-***********************************************/
+*********************************************** /
 void dijkstra(int graphe[N][N], int origine, noeud *n) {
     tas t;
     t.taille = 0;
-    initialiser_noeuds(n,origine);
+    initialiser_noeuds(n,origine); // <--- APPEL INCORRECT
     inserer(&t, origine, n);
     while (t.taille > 0) {
         int u = extraire_min(&t, n);
@@ -245,9 +244,10 @@ void dijkstra(int graphe[N][N], int origine, noeud *n) {
         }
     }
 }
+
 /**********************************************
                 A_etoile 
-***********************************************/
+*********************************************** /
 
 // ?
 void A_etoile(int graphe[N][N], int depart, int arrivee, int positions[N][2]) {
@@ -295,4 +295,67 @@ void A_etoile(int graphe[N][N], int depart, int arrivee, int positions[N][2]) {
     }
 
     printf("Aucun chemin trouvé.\n");
+}*/
+
+
+
+
+// BFS adapté pour naviguer dans le labyrinthe en utilisant le tableau de murs
+void BFS_laby(int *murs, int lignes, int colonnes, int origine, noeud* n) {
+    int nb_cellules = lignes * colonnes;
+    file f;
+    initialiser_file(&f, nb_cellules);
+    initialiser_noeuds(n, origine, nb_cellules);
+
+    n->visite[origine] = 1;
+    enfiler(&f, origine);
+
+    while (!filevide(&f)) {
+        int u = defiler(&f);
+
+        int x, y;
+        indice_vers_coord(u, colonnes, &x, &y);
+
+        // Voisin du haut (y-1)
+        if (y > 0 && !(murs[u] & 1)) { // S'il n'y a pas de mur en haut
+            int v = (y - 1) * colonnes + x;
+            if (!n->visite[v]) {
+                n->visite[v] = 1;
+                n->distance[v] = n->distance[u] + 1;
+                n->parent[v] = u;
+                enfiler(&f, v);
+            }
+        }
+        // Voisin de droite (x+1)
+        if (x < colonnes - 1 && !(murs[u] & 2)) { // S'il n'y a pas de mur à droite
+            int v = y * colonnes + (x + 1);
+            if (!n->visite[v]) {
+                n->visite[v] = 1;
+                n->distance[v] = n->distance[u] + 1;
+                n->parent[v] = u;
+                enfiler(&f, v);
+            }
+        }
+        // Voisin du bas (y+1)
+        if (y < lignes - 1 && !(murs[u] & 4)) { // S'il n'y a pas de mur en bas
+            int v = (y + 1) * colonnes + x;
+            if (!n->visite[v]) {
+                n->visite[v] = 1;
+                n->distance[v] = n->distance[u] + 1;
+                n->parent[v] = u;
+                enfiler(&f, v);
+            }
+        }
+        // Voisin de gauche (x-1)
+        if (x > 0 && !(murs[u] & 8)) { // S'il n'y a pas de mur à gauche
+            int v = y * colonnes + (x - 1);
+            if (!n->visite[v]) {
+                n->visite[v] = 1;
+                n->distance[v] = n->distance[u] + 1;
+                n->parent[v] = u;
+                enfiler(&f, v);
+            }
+        }
+    }
+    free_file(&f);
 }
