@@ -6,9 +6,10 @@
 #include <stdio.h>
 #include<stdbool.h>
 #include <math.h>
+#include <limits.h>
 
 #define N 8
-#define INF -1
+#define INF INT_MAX
 
 //structures:
 
@@ -27,7 +28,7 @@ typedef struct {
 } file;
 
 typedef struct tas {
-    int tab[N];
+    int *tab;
     int taille;
 }tas;
 

@@ -5,7 +5,7 @@
 #include "labySDL.h"
 #include "laby.h"
 
-
+#define MAX_COUT 10 // Coût maximal pour traverser une cellule
 
 
 // Initialise une partition de taille 'total'
@@ -64,6 +64,9 @@ void fisher_yates(arete G[], int n) {
     }
 }
 
+
+
+
 // Génère une grille vide avec toutes les arêtes possibles verticales et horizontales
 int generation_grille_vide(arete **G_ptr, int lignes, int colonnes) {
     int max_aretes = 2 * lignes * colonnes - lignes - colonnes; // (n-1) * m + (m-1) * n = 2 * n * m - m - n
@@ -119,6 +122,65 @@ void indice_vers_coord(int indice, int colonnes, int* x, int* y) {
     *y = indice / colonnes;
     *x = indice % colonnes;
 }
+
+
+
+int** creer_matrice_adjacence(int* murs, int lignes, int colonnes) {
+    int nb_cellules = lignes * colonnes;
+    int** matrice = malloc(sizeof(int*) * nb_cellules);
+    if (!matrice) return NULL;
+    for (int i = 0; i < nb_cellules; i++) {
+        matrice[i] = calloc(nb_cellules, sizeof(int));
+        if (!matrice[i]) { /* ... gestion erreur ... */ return NULL; }
+    }
+
+    // Remplir la matrice
+    for (int u = 0; u < nb_cellules; u++) {
+        int x, y;
+        indice_vers_coord(u, colonnes, &x, &y);
+
+        // Voisin du haut
+        if (y > 0 && !(murs[u] & 1) && matrice[u][(y - 1) * colonnes + x] == 0) {
+            int v = (y - 1) * colonnes + x;
+            int cout_arete = (rand() % MAX_COUT) + 1; // Génère un coût aléatoire pour l'arête
+            matrice[u][v] = cout_arete;
+            matrice[v][u] = cout_arete; // Assigne le MÊME coût au chemin du retour
+        }
+        // Voisin de droite
+        if (x < colonnes - 1 && !(murs[u] & 2) && matrice[u][y * colonnes + (x + 1)] == 0) {
+            int v = y * colonnes + (x + 1);
+            int cout_arete = (rand() % MAX_COUT) + 1;
+            matrice[u][v] = cout_arete;
+            matrice[v][u] = cout_arete;
+        }
+        // Voisin du bas
+        if (y < lignes - 1 && !(murs[u] & 4) && matrice[u][(y + 1) * colonnes + x] == 0) {
+            int v = (y + 1) * colonnes + x;
+            int cout_arete = (rand() % MAX_COUT) + 1;
+            matrice[u][v] = cout_arete;
+            matrice[v][u] = cout_arete;
+        }
+        // Voisin de gauche
+        if (x > 0 && !(murs[u] & 8) && matrice[u][y * colonnes + (x - 1)] == 0) {
+            int v = y * colonnes + (x - 1);
+            int cout_arete = (rand() % MAX_COUT) + 1;
+            matrice[u][v] = cout_arete;
+            matrice[v][u] = cout_arete;
+        }
+    }
+    return matrice;
+}
+
+
+// Libère la mémoire allouée pour la matrice d'adjacence.
+void liberer_matrice_adjacence(int** matrice, int nb_cellules) {
+    if (!matrice) return;
+    for (int i = 0; i < nb_cellules; i++) {
+        free(matrice[i]);
+    }
+    free(matrice);
+}
+
 
 // la fonction supprime un mur entre deux cellules adjacentes
 //=============================================================================================================================//
@@ -358,4 +420,76 @@ void BFS_laby(int *murs, int lignes, int colonnes, int origine, noeud* n) {
         }
     }
     free_file(&f);
+}
+
+// Dijkstra fonctionnant sur une matrice d'adjacence.
+void Dijkstra_laby(int** graphe, int nb_cellules, int destination, noeud* n) {
+    initialiser_noeuds(n, destination, nb_cellules);
+    
+    tas t;
+    t.tab = malloc(sizeof(int) * nb_cellules);
+    t.taille = 0;
+    inserer(&t, destination, n);
+
+    while (t.taille > 0) {
+        int u = extraire_min(&t, n);
+        if (n->visite[u]) continue;
+        n->visite[u] = 1;
+
+        // LA LOGIQUE CHANGE ICI
+        // Au lieu de vérifier les murs, on parcourt la ligne de la matrice.
+        // C'est moins efficace car on teste les N-1 cellules même si 'u' n'a que 4 voisins max.
+        for (int v = 0; v < nb_cellules; v++) {
+            // S'il y a une arête entre u et v (le coût est > 0)
+            // Note: Pour un Dijkstra qui part de la destination, on cherche les arêtes qui "entrent" dans u.
+            // Mais comme notre graphe est non-orienté, graphe[v][u] == graphe[u][v]
+            if (graphe[v][u] > 0 && !n->visite[v]) {
+                // Le coût du pas est le poids de l'arête (v, u)
+                int cout_du_pas = graphe[v][u];
+
+                if (n->distance[u] + cout_du_pas < n->distance[v]) {
+                    n->distance[v] = n->distance[u] + cout_du_pas;
+                    n->parent[v] = u;
+                    inserer(&t, v, n);
+                }
+            }
+        }
+    }
+    free(t.tab);
+}
+
+
+
+
+
+
+
+// Reconstruit le chemin depuis la destination vers le départ en utilisant le tableau parent.
+// Le chemin est inversé pour être dans le bon sens (départ -> destination).
+// Renvoie le nombre d'étapes dans le chemin.
+int reconstruire_chemin(noeud* n, int depart, int destination, int* chemin_buffer) {
+    if (n->distance[depart] == INF) {
+        printf("Avertissement : Pas de chemin trouvé entre %d et %d\n", depart, destination);
+        return 0; // Pas de chemin
+    }
+
+    int etapes = 0;
+    int courant = depart;
+    
+    // On suit les parents depuis le départ jusqu'à atteindre la destination.
+    // Le chemin est construit directement dans le bon ordre.
+    while (courant != destination) {
+        chemin_buffer[etapes++] = courant;
+        courant = n->parent[courant];
+        
+        // Sécurité simple et efficace pour éviter les boucles infinies
+        if (courant == -1) { 
+            fprintf(stderr, "Erreur: Chemin cassé lors de la reconstruction.\n");
+            return 0;
+        }
+    }
+    // Ne pas oublier d'ajouter la destination elle-même à la fin du chemin.
+    chemin_buffer[etapes++] = destination;
+    
+    return etapes;
 }

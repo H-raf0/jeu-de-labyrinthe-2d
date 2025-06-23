@@ -35,6 +35,10 @@ void generer_dot(const char* nom, arete aretes[], int nb);
 void indice_vers_coord(int indice, int colonnes, int* x, int* y);
 void supprimer_mur(int *murs, int colonnes, int u, int v);
 
+//================== Manipulation de Graphe ====================
+int** creer_matrice_adjacence(int* murs, int lignes, int colonnes);
+void liberer_matrice_adjacence(int** matrice, int nb_cellules);
+
 //================== BFS/DIj/A* ==============================
 
 /*
@@ -43,10 +47,18 @@ void BFS(int m_adj[N][N], int origine,noeud* n);
 void dijkstra(int graphe[N][N], int origine, noeud *n);
 void A_etoile(int graphe[N][N], int depart, int arrivee, int positions[N][2]); //?????
 */
+
 //================== Résolution de labyrinthe ====================
 void BFS_laby(int *murs, int lignes, int colonnes, int origine, noeud* n);
+void Dijkstra_laby(int** graphe, int nb_cellules, int destination, noeud* n);
+
+int reconstruire_chemin(noeud* n, int depart, int destination, int* chemin_buffer);
 
 //================== Affichage ===============================
 void afficher_labyrinthe_unicode(int *murs, int lignes, int colonnes);
 
 #endif
+
+
+
+
