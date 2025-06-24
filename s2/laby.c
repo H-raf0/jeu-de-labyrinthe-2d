@@ -125,7 +125,7 @@ void indice_vers_coord(int indice, int colonnes, int* x, int* y) {
 
 
 
-int** creer_matrice_adjacence(int* murs, int lignes, int colonnes) {
+int** creer_matrice_adjacence_cout_altr(int* murs, int lignes, int colonnes) {
     int nb_cellules = lignes * colonnes;
     int** matrice = malloc(sizeof(int*) * nb_cellules);
     if (!matrice) return NULL;
@@ -213,6 +213,55 @@ int** creer_matrice_adjacence_connue(int* murs_connus, int lignes, int colonnes)
     }
     return matrice;
 }
+
+
+
+int** creer_matrice_couts_connus(int* murs_connus, int* passages_counts, int lignes, int colonnes) {
+    int nb_cellules = lignes * colonnes;
+    int** matrice = malloc(sizeof(int*) * nb_cellules);
+    if (!matrice) return NULL;
+    for (int i = 0; i < nb_cellules; i++) {
+        matrice[i] = calloc(nb_cellules, sizeof(int));
+        if (!matrice[i]) { /* ... gestion erreur ... */ return NULL; }
+    }
+
+    for (int u = 0; u < nb_cellules; u++) {
+        int x, y;
+        indice_vers_coord(u, colonnes, &x, &y);
+        int v;
+
+        // Voisin du haut
+        if (y > 0 && !(murs_connus[u] & 1)) {
+            v = (y - 1) * colonnes + x;
+            int cout = 1 + passages_counts[v]; // Coût pour entrer dans la cellule v
+            matrice[u][v] = cout;
+            matrice[v][u] = 1 + passages_counts[u]; // Coût pour revenir en u
+        }
+        // Voisin de droite
+        if (x < colonnes - 1 && !(murs_connus[u] & 2)) {
+            v = y * colonnes + (x + 1);
+            int cout = 1 + passages_counts[v];
+            matrice[u][v] = cout;
+            matrice[v][u] = 1 + passages_counts[u];
+        }
+        // Voisin du bas
+        if (y < lignes - 1 && !(murs_connus[u] & 4)) {
+            v = (y + 1) * colonnes + x;
+            int cout = 1 + passages_counts[v];
+            matrice[u][v] = cout;
+            matrice[v][u] = 1 + passages_counts[u];
+        }
+        // Voisin de gauche
+        if (x > 0 && !(murs_connus[u] & 8)) {
+            v = y * colonnes + (x - 1);
+            int cout = 1 + passages_counts[v];
+            matrice[u][v] = cout;
+            matrice[v][u] = 1 + passages_counts[u];
+        }
+    }
+    return matrice;
+}
+
 
 // Libère la mémoire allouée pour la matrice d'adjacence.
 void liberer_matrice_adjacence(int** matrice, int nb_cellules) {
