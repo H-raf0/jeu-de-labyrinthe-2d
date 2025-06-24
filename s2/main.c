@@ -5,7 +5,7 @@
 #include "laby.h"
 #include "labySDL.h"
 
-#define CURRENT_ALGO 2
+#define CURRENT_ALGO 1
 // 0 BFS, 1 DIJSKTRA, 2 A*
 #define VITESSE 0.2f
 
@@ -36,12 +36,14 @@ void lancer_animation_labyrinthe(int* murs, int lignes, int colonnes) {
 
     // --- Création de la matrice d'adjacence ---
     printf("Création de la matrice d'adjacence...\n");
-    int** graphe = creer_matrice_adjacence(murs, lignes, colonnes);
-    if (!graphe) {
-        fprintf(stderr, "Impossible de créer la matrice d'adjacence.\n");
-        return;
+    int** graphe = NULL;
+    if (CURRENT_ALGO == 1) {
+        graphe = creer_matrice_adjacence(murs, lignes, colonnes);
+        if (!graphe) {
+            fprintf(stderr, "Impossible de créer la matrice d'adjacence.\n");
+            return;
+        }
     }
-
 
     // Calculer le premier chemin
     if(CURRENT_ALGO == 0) BFS_laby(murs, lignes, colonnes, destination, &n);
@@ -283,6 +285,7 @@ int main() {
     for (int i = 0; i < nb_aretes_arbre; i++) supprimer_mur(murs_reels, colonnes, arbre[i].u, arbre[i].v);
     free(arbre);
 
+    //lancer_animation_labyrinthe(murs_reels, lignes, colonnes);
     demarrer_exploration_dynamique(murs_reels, lignes, colonnes);
 
     free(murs_reels);
