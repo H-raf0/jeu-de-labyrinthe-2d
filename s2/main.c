@@ -276,7 +276,7 @@ void demarrer_exploration_dynamique(int* murs_reels, int lignes, int colonnes) {
     SDL_Quit();
 }
 
-// G.I.D.I
+// G.I.D.I, matrice adj 2D à 1D 
 void demarrer_exploration_inconnue(int* murs_reels, int lignes, int colonnes, int destination_reelle) {
     int nb_cellules = lignes * colonnes;
     int depart = 0;
@@ -317,7 +317,9 @@ void demarrer_exploration_inconnue(int* murs_reels, int lignes, int colonnes, in
 
         printf("Planification locale avec Dijkstra sur la base des coûts connus...\n");
         // 1. Créer le "cerveau" pondéré de l'agent
-        int** graphe_connu = creer_matrice_couts_connus(murs_connus, passages_counts, lignes, colonnes);
+
+        //int** graphe_connu = creer_matrice_couts_connus(murs_connus, passages_counts, lignes, colonnes);
+        int** graphe_connu = creer_matrice_adjacence_connue(murs_connus, lignes, colonnes);
         if (!graphe_connu) { printf("Erreur allocation graphe connu\n"); break; }
 
         noeud plan_vers_frontiere;
@@ -450,8 +452,8 @@ void demarrer_exploration_inconnue(int* murs_reels, int lignes, int colonnes, in
 
 int main() {
     srand(time(NULL));
-    int lignes = 15;
-    int colonnes = 20;
+    int lignes = 20;
+    int colonnes = 30;
     int nb_cellules = lignes * colonnes;
     
     arete *toutes_aretes;

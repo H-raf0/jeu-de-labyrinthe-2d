@@ -1,6 +1,6 @@
 #SRC ?= sprite.c bSDL.c
-SRC = laby.c labySDL.c main.c structures.c
-#SRC = laby.c labySDL.c jeu.c structures.c
+#SRC = laby.c labySDL.c main.c structures.c
+SRC = laby.c labySDL.c jeu.c structures.c
 EXE := exec
 
 CC := gcc

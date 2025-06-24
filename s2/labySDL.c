@@ -43,7 +43,6 @@ void dessiner_murs(SDL_Renderer* rendu, int x, int y, int *murs, int colonnes) {
 void dessiner_murs_connus(SDL_Renderer* rendu, int x, int y, int *murs, int colonnes) {
     // Garder la couleur originale pour la restaurer plus tard si besoin
     Uint8 r, g, b, a;
-    int epes = 3;
     SDL_GetRenderDrawColor(rendu, &r, &g, &b, &a);
 
     // Mettre la couleur des murs connus en gris
@@ -52,7 +51,7 @@ void dessiner_murs_connus(SDL_Renderer* rendu, int x, int y, int *murs, int colo
     int px = x * TAILLE_CELLULE;
     int py = y * TAILLE_CELLULE;
     int val = murs[y * colonnes + x];
-    for(int i=-epes; i<=epes; ++i){
+    for(int i=-EPES; i<=EPES; ++i){
         if (val & 1) SDL_RenderDrawLine(rendu, px, py + i, px + TAILLE_CELLULE, py + i);
         if (val & 2) SDL_RenderDrawLine(rendu, px + TAILLE_CELLULE + i, py, px + TAILLE_CELLULE + i, py + TAILLE_CELLULE);
         if (val & 4) SDL_RenderDrawLine(rendu, px, py + TAILLE_CELLULE + i, px + TAILLE_CELLULE, py + TAILLE_CELLULE + i);
