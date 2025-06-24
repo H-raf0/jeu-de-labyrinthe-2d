@@ -34,7 +34,7 @@ void generer_dot(const char* nom, arete aretes[], int nb);
 //================== Manipulation de murs ====================
 void indice_vers_coord(int indice, int colonnes, int* x, int* y);
 void supprimer_mur(int *murs, int colonnes, int u, int v);
-
+void ajouter_mur(int *murs, int colonnes, int u, int v); 
 //================== Manipulation de Graphe ====================
 int** creer_matrice_adjacence(int* murs, int lignes, int colonnes);
 void liberer_matrice_adjacence(int** matrice, int nb_cellules);
