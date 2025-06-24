@@ -40,6 +40,28 @@ void dessiner_murs(SDL_Renderer* rendu, int x, int y, int *murs, int colonnes) {
     if (val & 8) SDL_RenderDrawLine(rendu, px, py, px, py + TAILLE_CELLULE); // gauche
 }
 
+void dessiner_murs_connus(SDL_Renderer* rendu, int x, int y, int *murs, int colonnes) {
+    // Garder la couleur originale pour la restaurer plus tard si besoin
+    Uint8 r, g, b, a;
+    int epes = 3;
+    SDL_GetRenderDrawColor(rendu, &r, &g, &b, &a);
+
+    // Mettre la couleur des murs connus en gris
+    SDL_SetRenderDrawColor(rendu, 100, 100, 100, 255);
+
+    int px = x * TAILLE_CELLULE;
+    int py = y * TAILLE_CELLULE;
+    int val = murs[y * colonnes + x];
+    for(int i=-epes; i<=epes; ++i){
+        if (val & 1) SDL_RenderDrawLine(rendu, px, py + i, px + TAILLE_CELLULE, py + i);
+        if (val & 2) SDL_RenderDrawLine(rendu, px + TAILLE_CELLULE + i, py, px + TAILLE_CELLULE + i, py + TAILLE_CELLULE);
+        if (val & 4) SDL_RenderDrawLine(rendu, px, py + TAILLE_CELLULE + i, px + TAILLE_CELLULE, py + TAILLE_CELLULE + i);
+        if (val & 8) SDL_RenderDrawLine(rendu, px + i, py, px + i, py + TAILLE_CELLULE);
+    }
+    // Restaurer la couleur originale
+    SDL_SetRenderDrawColor(rendu, r, g, b, a);
+}
+
 // Affiche le labyrinthe avec SDL
 void afficher_labyrinthe_sdl(arete arbre[], int nb_aretes, int lignes, int colonnes) {
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {

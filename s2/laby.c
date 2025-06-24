@@ -219,6 +219,28 @@ void supprimer_mur(int *murs, int colonnes, int u, int v) {
 }
 
 
+void ajouter_mur(int *murs, int colonnes, int u, int v) {
+    int x1, y1, x2, y2;
+    indice_vers_coord(u, colonnes, &x1, &y1);
+    indice_vers_coord(v, colonnes, &x2, &y2);
+    int dx = x2 - x1;
+    int dy = y2 - y1;
+
+    if (dx == 1) { // v à droite de u
+        murs[u] |= 2; // ajouter mur à droite de u
+        murs[v] |= 8; // ajouter mur à gauche de v
+    } else if (dx == -1) { // v à gauche de u
+        murs[u] |= 8;
+        murs[v] |= 2;
+    } else if (dy == 1) { // v en bas de u
+        murs[u] |= 4; // bas
+        murs[v] |= 1; // haut
+    } else if (dy == -1) { // v en haut de u
+        murs[u] |= 1;
+        murs[v] |= 4;
+    }
+}
+
 
 
 

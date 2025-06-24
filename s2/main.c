@@ -5,11 +5,13 @@
 #include "laby.h"
 #include "labySDL.h"
 
-#define CURRENT_ALGO 2
+#define CURRENT_ALGO 1
 // 0 BFS, 1 DIJSKTRA, 2 A*
 #define VITESSE 0.2f
 
 #define CURRENT_HEURISTIC HEURISTIC_MANHATTAN // HEURISTIC_MANHATTAN ou HEURISTIC_EUCLIDEAN ou HEURISTIC_TCHEBYCHEV
+
+#define DELAI_PAS 50
 
 void lancer_animation_labyrinthe(int* murs, int lignes, int colonnes) {
     int nb_cellules = lignes * colonnes;
@@ -34,12 +36,14 @@ void lancer_animation_labyrinthe(int* murs, int lignes, int colonnes) {
 
     // --- Création de la matrice d'adjacence ---
     printf("Création de la matrice d'adjacence...\n");
-    int** graphe = creer_matrice_adjacence(murs, lignes, colonnes);
-    if (!graphe) {
-        fprintf(stderr, "Impossible de créer la matrice d'adjacence.\n");
-        return;
+    int** graphe = NULL;
+    if (CURRENT_ALGO == 1) {
+        graphe = creer_matrice_adjacence(murs, lignes, colonnes);
+        if (!graphe) {
+            fprintf(stderr, "Impossible de créer la matrice d'adjacence.\n");
+            return;
+        }
     }
-
 
     // Calculer le premier chemin
     if(CURRENT_ALGO == 0) BFS_laby(murs, lignes, colonnes, destination, &n);
@@ -129,6 +133,185 @@ void lancer_animation_labyrinthe(int* murs, int lignes, int colonnes) {
     SDL_Quit();
 }
 
+
+void demarrer_exploration_dynamique(int* murs_reels, int lignes, int colonnes) {
+    int nb_cellules = lignes * colonnes;
+    int depart = 0;
+    int destination = nb_cellules - 1;
+
+    // Connaissance de l'agent: commence vide, sans aucun mur.
+    int* murs_connus = calloc(nb_cellules, sizeof(int));
+    if (!murs_connus) { return; }
+
+    // Initialisation SDL
+    SDL_Init(SDL_INIT_VIDEO);
+    SDL_Window* fenetre = SDL_CreateWindow("Exploration Dynamique (Version Finale)", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, colonnes * TAILLE_CELLULE, lignes * TAILLE_CELLULE, SDL_WINDOW_SHOWN);
+    SDL_Renderer* rendu = SDL_CreateRenderer(fenetre, -1, SDL_RENDERER_ACCELERATED);
+    SDL_Texture* perso_texture = IMG_LoadTexture(rendu, "personnage.png");
+
+    int pos_actuelle = depart;
+    bool quitter_programme = false;
+
+
+
+    // --- Création de la matrice d'adjacence ---
+    printf("Création de la matrice d'adjacence...\n");
+    int** graphe = NULL;
+    if (CURRENT_ALGO == 1) {
+        graphe = creer_matrice_adjacence(murs_reels, lignes, colonnes);
+        if (!graphe) {
+            fprintf(stderr, "Impossible de créer la matrice d'adjacence.\n");
+            return;
+        }
+    }
+
+
+    while (!quitter_programme){
+
+        // if 2 monstre se raproche, aug cout d un deplacement dans la direction de l autre
+
+        // --- Boucle Principale: L'agent se déplace case par case ---
+        while (pos_actuelle != destination && !quitter_programme) {
+            
+            // --- Boucle de Réflexion: L'agent reste ici jusqu'à ce qu'il puisse bouger ---
+            bool a_transite = false;
+            while (!a_transite && !quitter_programme) {
+                
+                // PLANIFIER sur la base de la connaissance actuelle
+                noeud plan;
+                //BFS_laby(murs_connus, lignes, colonnes, destination, &plan);
+                Dijkstra_laby(graphe, lignes*colonnes, destination, &plan);
+                // Gérer les événements (comme la fermeture de la fenêtre)
+                SDL_Event e;
+                if (SDL_PollEvent(&e) && e.type == SDL_QUIT) {
+                    quitter_programme = true;
+                    free_noeuds(&plan);
+                    continue;
+                }
+
+                // DÉCIDER du meilleur mouvement
+                int meilleur_voisin = -1;
+                int min_dist_estimee = INF;
+                int x_act, y_act;
+                indice_vers_coord(pos_actuelle, colonnes, &x_act, &y_act);
+
+                int voisins[4] = {
+                    (y_act > 0) ? (y_act - 1) * colonnes + x_act : -1,
+                    (x_act < colonnes - 1) ? y_act * colonnes + (x_act + 1) : -1,
+                    (y_act < lignes - 1) ? (y_act + 1) * colonnes + x_act : -1,
+                    (x_act > 0) ? y_act * colonnes + (x_act - 1) : -1
+                };
+
+                for (int i = 0; i < 4; i++) {
+                    int v = voisins[i];
+                    if (v == -1) continue;
+
+                    // --- CORRECTION DÉCISIVE ---
+                    // On vérifie d'abord si l'agent PENSE pouvoir aller vers ce voisin
+                    int diff_temp = v - pos_actuelle;
+                    int direction_flag_temp = 0;
+                    if (diff_temp == -colonnes) direction_flag_temp = 1; else if (diff_temp == 1) direction_flag_temp = 2;
+                    else if (diff_temp == colonnes) direction_flag_temp = 4; else if (diff_temp == -1) direction_flag_temp = 8;
+                    
+                    // Si la carte de l'agent n'indique PAS de mur, alors on considère ce voisin
+                    if (!(murs_connus[pos_actuelle] & direction_flag_temp)) {
+                        if (plan.distance[v] < min_dist_estimee) {
+                            min_dist_estimee = plan.distance[v];
+                            meilleur_voisin = v;
+                        }
+                    }
+                }
+
+                // Cas critique: l'agent est dans une impasse connue
+                if (meilleur_voisin == -1) {
+                    printf("IMPASSE CONNUE. L'agent ne peut plus bouger.\n");
+                    quitter_programme = true;
+                    free_noeuds(&plan);
+                    continue;
+                }
+
+                // CONFRONTER LA RÉALITÉ
+                int diff = meilleur_voisin - pos_actuelle;
+                int direction_flag = 0;
+                if (diff == -colonnes) direction_flag = 1; else if (diff == 1) direction_flag = 2;
+                else if (diff == colonnes) direction_flag = 4; else if (diff == -1) direction_flag = 8;
+
+                if (murs_reels[pos_actuelle] & direction_flag) {
+                    // ÉCHEC: MUR INATTENDU. Apprendre et laisser la boucle de réflexion recommencer.
+                    printf("SURPRISE! Mur de %d à %d. Apprentissage...\n", pos_actuelle, meilleur_voisin);
+                    ajouter_mur(murs_connus, colonnes, pos_actuelle, meilleur_voisin);
+                    free_noeuds(&plan); // Nettoyer l'ancien plan.
+                } else {
+                    // SUCCÈS: Le passage est libre.
+                    printf("Mouvement de %d à %d.\n", pos_actuelle, meilleur_voisin);
+                    pos_actuelle = meilleur_voisin;
+                    a_transite = true; // Le transit a réussi, on sort de la boucle de réflexion.
+                    
+
+
+                    // DESSINER l'état actuel (position et plan mental)
+                    SDL_SetRenderDrawColor(rendu, 0, 0, 0, 255);
+                    SDL_RenderClear(rendu);
+                    for (int i = 0; i < nb_cellules; i++) dessiner_murs_connus(rendu, i % colonnes, i / colonnes, murs_connus, colonnes);
+                    dessiner_marqueurs(rendu, depart, destination, colonnes);
+                    dessiner_personnage(rendu, perso_texture, (pos_actuelle % colonnes + 0.5f) * TAILLE_CELLULE, (pos_actuelle / colonnes + 0.5f) * TAILLE_CELLULE);
+                    SDL_RenderPresent(rendu);
+                    SDL_Delay(DELAI_PAS);
+
+
+                    free_noeuds(&plan); // Nettoyer le plan qui a mené au succès.
+                }
+            } // Fin de la boucle de réflexion
+        } // Fin de la boucle de déplacement
+        pos_actuelle = depart;
+        // ou aller vers la cellule la plus loin qui ne possède pas de murs
+    }
+    
+
+    if (!quitter_programme) {
+        printf("\nDestination atteinte !\n");
+        SDL_Delay(3000);
+    }
+
+    // Nettoyage final
+    free(murs_connus);
+    liberer_matrice_adjacence(graphe, nb_cellules);
+    SDL_DestroyTexture(perso_texture);
+    SDL_DestroyRenderer(rendu);
+    SDL_DestroyWindow(fenetre);
+    SDL_Quit();
+}
+
+int main() {
+    srand(time(NULL));
+    int lignes = 15;
+    int colonnes = 20;
+    int nb_cellules = lignes * colonnes;
+    
+    arete *toutes_aretes;
+    int nb_total_aretes = generation_grille_vide(&toutes_aretes, lignes, colonnes);
+    fisher_yates(toutes_aretes, nb_total_aretes);
+    arete *arbre = malloc(sizeof(arete) * (nb_cellules - 1));
+    int nb_aretes_arbre;
+    construire_arbre_couvrant(toutes_aretes, nb_total_aretes, arbre, &nb_aretes_arbre, nb_cellules);
+    free(toutes_aretes);
+    
+    int *murs_reels = malloc(sizeof(int) * nb_cellules);
+    for (int i = 0; i < nb_cellules; i++) murs_reels[i] = 1 | 2 | 4 | 8;
+    for (int i = 0; i < nb_aretes_arbre; i++) supprimer_mur(murs_reels, colonnes, arbre[i].u, arbre[i].v);
+    free(arbre);
+
+    //lancer_animation_labyrinthe(murs_reels, lignes, colonnes);
+    demarrer_exploration_dynamique(murs_reels, lignes, colonnes);
+
+    free(murs_reels);
+    printf("Programme terminé.\n");
+    return 0;
+}
+
+
+/*
+//affichage des 3 algos
 int main() {
     srand(time(NULL));
 
@@ -159,7 +342,7 @@ int main() {
     printf("Programme terminé.\n");
     return 0;
 }
-
+*/
 
 /*
 int main(int argc, char* argv[]) {
