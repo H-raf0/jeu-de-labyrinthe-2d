@@ -5,7 +5,7 @@
 #include "laby.h"
 #include "labySDL.h"
 
-#define CURRENT_ALGO 1
+#define CURRENT_ALGO 2
 // 0 BFS, 1 DIJSKTRA, 2 A*
 #define VITESSE 0.2f
 
@@ -14,6 +14,22 @@
 #define DELAI_PAS 50
 
 #define DELAI_PAS_EXPLORATION 50
+
+
+
+// Mélange un tableau d'entiers en utilisant l'algorithme de Fisher-Yates.
+// Nécessaire pour respecter la suggestion de "mélanger V".
+void melanger_voisins(int* tableau, int n) {
+    if (n > 1) {
+        for (int i = n - 1; i > 0; i--) {
+            int j = rand() % (i + 1);
+            int temp = tableau[i];
+            tableau[i] = tableau[j];
+            tableau[j] = temp;
+        }
+    }
+}
+
 
 void lancer_animation_labyrinthe(int* murs, int lignes, int colonnes) {
     int nb_cellules = lignes * colonnes;
@@ -135,7 +151,7 @@ void lancer_animation_labyrinthe(int* murs, int lignes, int colonnes) {
     SDL_Quit();
 }
 
-// G.I.D.C //dijkstra matrice adj pas correct
+// G.I.D.C 
 void demarrer_exploration_dynamique(int* murs_reels, int lignes, int colonnes) {
     int nb_cellules = lignes * colonnes;
     int depart = 0;
@@ -265,74 +281,99 @@ void demarrer_exploration_inconnue(int* murs_reels, int lignes, int colonnes, in
     int nb_cellules = lignes * colonnes;
     int depart = 0;
 
-    // --- Structures de données de l'agent ---
+    // --- Structures de données de l'agent (G, F, O) ---
+    // G: Connaissance du graphe (murs découverts)
     int* murs_connus = calloc(nb_cellules, sizeof(int));
-    int* noeuds_visites = calloc(nb_cellules, sizeof(int)); // F (Closed set)
-    int* frontier_nodes = malloc(sizeof(int) * nb_cellules); // O (Open set)
+    // F: Ensemble des noeuds visités (Closed Set). Un tableau de booléens est la meilleure structure ici.
+    bool* noeuds_visites = calloc(nb_cellules, sizeof(bool));
+    // O: Ensemble des noeuds de la frontière (Open Set). Un simple tableau suffit.
+    int* frontier_nodes = malloc(sizeof(int) * nb_cellules);
     int frontier_size = 0;
-    int* passages_counts = calloc(nb_cellules, sizeof(int)); // Pour la heatmap
+    // Données pour la heatmap de l'affichage
+    int* passages_counts = calloc(nb_cellules, sizeof(int));
     int max_passages = 0;
 
     // --- Initialisation SDL ---
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_Window* fenetre = SDL_CreateWindow("Exploration (Destination Inconnue)", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, colonnes * TAILLE_CELLULE, lignes * TAILLE_CELLULE, SDL_WINDOW_SHOWN);
+    SDL_Window* fenetre = SDL_CreateWindow("Exploration (Spec. Annonce)", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, colonnes * TAILLE_CELLULE, lignes * TAILLE_CELLULE, SDL_WINDOW_SHOWN);
     SDL_Renderer* rendu = SDL_CreateRenderer(fenetre, -1, SDL_RENDERER_ACCELERATED);
     SDL_Texture* perso_texture = IMG_LoadTexture(rendu, "personnage.png");
 
-    // --- Initialisation de l'algorithme ---
+    // --- Initialisation de l'algorithme (selon la spec) ---
     int pos_actuelle = depart;
+    // "mettre noeud dans O"
+    frontier_nodes[frontier_size++] = pos_actuelle; 
+
     bool destination_trouvee = false;
     
-    while (!destination_trouvee) {
-        // Gérer la fermeture de la fenêtre
+    // --- Boucle d'Itération Principale ---
+    // La boucle continue tant qu'il y a des noeuds à explorer sur la frontière.
+    while (frontier_size > 0 && !destination_trouvee) {
         SDL_Event e;
         if (SDL_PollEvent(&e) && e.type == SDL_QUIT) break;
         
-        // --- ÉTAPE 1: L'AGENT EST SUR UNE CASE ET OBSERVE ---
+        // --- ÉTAPE 1: DÉCIDER DE LA PROCHAINE CIBLE SUR LA FRONTIÈRE ---
+        // "rechercher un noeud de O à distance minimale de noeud (pos_actuelle)"
+        noeud plan_vers_frontiere;
+        BFS_laby(murs_connus, lignes, colonnes, pos_actuelle, &plan_vers_frontiere);
         
-        // On vérifie si on a trouvé la destination par chance
-        if (pos_actuelle == destination_reelle) {
-            destination_trouvee = true;
-            printf("DESTINATION TROUVÉE en %d !\n", pos_actuelle);
-            continue;
-        }
-
-        // Marquer la position actuelle comme visitée (ajout à F)
-        noeuds_visites[pos_actuelle] = 1;
-
-        // "Scanner" les murs autour et mettre à jour la connaissance (G)
-        int x_act, y_act;
-        indice_vers_coord(pos_actuelle, colonnes, &x_act, &y_act);
-        int voisins[4] = {
-            (y_act > 0) ? (y_act - 1) * colonnes + x_act : -1, (x_act < colonnes - 1) ? y_act * colonnes + (x_act + 1) : -1,
-            (y_act < lignes - 1) ? (y_act + 1) * colonnes + x_act : -1, (x_act > 0) ? y_act * colonnes + (x_act - 1) : -1
-        };
-        for (int i = 0; i < 4; i++) {
-            if (voisins[i] == -1) continue;
-            int diff = voisins[i] - pos_actuelle;
-            int dir_flag = 0;
-            if (diff == -colonnes) dir_flag = 1; else if (diff == 1) dir_flag = 2; else if (diff == colonnes) dir_flag = 4; else if (diff == -1) dir_flag = 8;
-            
-            if (murs_reels[pos_actuelle] & dir_flag) { // Il y a un mur
-                ajouter_mur(murs_connus, colonnes, pos_actuelle, voisins[i]);
-            } else { // Il n'y a pas de mur, c'est un voisin accessible
-                // Si le voisin n'a pas encore été visité (pas dans F), on l'ajoute à la frontière (O)
-                if (!noeuds_visites[voisins[i]]) {
-                    // Vérifier s'il est déjà dans la frontière pour éviter les doublons
-                    bool deja_dans_frontiere = false;
-                    for (int j = 0; j < frontier_size; j++) {
-                        if (frontier_nodes[j] == voisins[i]) { deja_dans_frontiere = true; break; }
-                    }
-                    if (!deja_dans_frontiere) {
-                        frontier_nodes[frontier_size++] = voisins[i];
-                    }
-                }
+        int target_node = -1;
+        int min_dist = INF;
+        for (int i = 0; i < frontier_size; i++) {
+            int node_f = frontier_nodes[i];
+            if (plan_vers_frontiere.distance[node_f] < min_dist) {
+                min_dist = plan_vers_frontiere.distance[node_f];
+                target_node = node_f;
             }
         }
-
-        // --- ÉTAPE 2: CHOISIR LA PROCHAINE DESTINATION (LE NOEUD LE PLUS PROCHE DE LA FRONTIÈRE) ---
         
-        // Retirer la position actuelle de la frontière si elle s'y trouvait
+        if (target_node == -1) {
+            printf("IMPASSE GLOBALE. Aucun noeud de la frontière n'est atteignable depuis la position %d.\n", pos_actuelle);
+            free_noeuds(&plan_vers_frontiere);
+            break;
+        }
+
+        // --- ÉTAPE 2: SE DÉPLACER VERS LA CIBLE CHOISIE ---
+        // "se rendre en ce noeud en utilisant le plus court chemin dans G"
+        int* chemin_vers_target = malloc(sizeof(int) * nb_cellules);
+        int nb_etapes = reconstruire_chemin_inverse(&plan_vers_frontiere, pos_actuelle, target_node, nb_cellules, chemin_vers_target);
+        free_noeuds(&plan_vers_frontiere); // Le plan n'est plus utile
+
+        printf("Cible choisie sur la frontière: %d. S'y rend en %d pas.\n", target_node, nb_etapes);
+
+        // Animer le déplacement le long du chemin calculé
+        for (int i = 1; i < nb_etapes; i++) { // On commence à 1 car l'étape 0 est la pos_actuelle
+            pos_actuelle = chemin_vers_target[i];
+            passages_counts[pos_actuelle]++;
+            if (passages_counts[pos_actuelle] > max_passages) max_passages = passages_counts[pos_actuelle];
+
+            // Code de Dessin (identique)
+            SDL_SetRenderDrawColor(rendu, 0, 0, 0, 255);
+            SDL_RenderClear(rendu);
+            dessiner_heatmap_passage(rendu, passages_counts, lignes, colonnes, max_passages);
+            for (int j = 0; j < nb_cellules; j++) {
+                dessiner_murs_connus(rendu, j % colonnes, j / colonnes, murs_connus, colonnes);
+            }
+            SDL_SetRenderDrawColor(rendu, 0, 255, 0, 255);
+            SDL_Rect dest_rect = {(destination_reelle % colonnes) * TAILLE_CELLULE, (destination_reelle / colonnes) * TAILLE_CELLULE, TAILLE_CELLULE, TAILLE_CELLULE};
+            SDL_RenderFillRect(rendu, &dest_rect);
+            dessiner_personnage(rendu, perso_texture, (pos_actuelle % colonnes + 0.5f) * TAILLE_CELLULE, (pos_actuelle / colonnes + 0.5f) * TAILLE_CELLULE);
+            SDL_RenderPresent(rendu);
+            SDL_Delay(DELAI_PAS_EXPLORATION);
+
+            if (pos_actuelle == destination_reelle) {
+                destination_trouvee = true;
+                break;
+            }
+        }
+        free(chemin_vers_target);
+        if (destination_trouvee) continue;
+
+        // --- ÉTAPE 3: EXPLORER DEPUIS LA NOUVELLE POSITION ATTEINTE ---
+        pos_actuelle = target_node;
+
+        // "mettre noeud dans F, l’enlever de O"
+        noeuds_visites[pos_actuelle] = true;
         for (int i = 0; i < frontier_size; i++) {
             if (frontier_nodes[i] == pos_actuelle) {
                 frontier_nodes[i] = frontier_nodes[--frontier_size]; // Remplacer par le dernier et réduire la taille
@@ -340,90 +381,51 @@ void demarrer_exploration_inconnue(int* murs_reels, int lignes, int colonnes, in
             }
         }
 
-        if (frontier_size == 0) {
-            printf("Exploration terminée. Plus aucun noeud sur la frontière.\n");
-            break;
-        }
+        // "mettre à jour le graphe G en fonction de ce que l’on observe en noeud"
+        // "Déterminer V l’ensemble des noeuds directement accessibles"
+        int x_act, y_act;
+        indice_vers_coord(pos_actuelle, colonnes, &x_act, &y_act);
+        int voisins[4] = {
+            (y_act > 0) ? (y_act - 1) * colonnes + x_act : -1,
+            (x_act < colonnes - 1) ? y_act * colonnes + (x_act + 1) : -1,
+            (y_act < lignes - 1) ? (y_act + 1) * colonnes + x_act : -1,
+            (x_act > 0) ? y_act * colonnes + (x_act - 1) : -1
+        };
 
+        // "mélanger V"
+        melanger_voisins(voisins, 4);
 
-        // Au lieu de BFS, on planifie avec Dijkstra sur la carte connue
-        printf("Planification locale avec Dijkstra...\n");
-
-        // 1. Créer le graphe pondéré à partir de la connaissance actuelle
-        int** graphe_connu = creer_matrice_adjacence_connue(murs_connus, lignes, colonnes);
-        if (!graphe_connu) {
-            printf("Erreur: impossible de créer le graphe connu.\n");
-            break; // Quitter si l'allocation échoue
-        }
-
-        // Plan local pour trouver le chemin le plus court vers les noeuds de la frontière
-        noeud plan_local;
-        Dijkstra_laby(graphe_connu, nb_cellules, pos_actuelle, &plan_local);
-
-        liberer_matrice_adjacence(graphe_connu, nb_cellules);
-
-
-
-        int target_node = -1;
-        int min_dist_to_frontier = INF;
-
-        for (int i = 0; i < frontier_size; i++) {
-            int node_on_frontier = frontier_nodes[i];
-            if (plan_local.distance[node_on_frontier] < min_dist_to_frontier) {
-                min_dist_to_frontier = plan_local.distance[node_on_frontier];
-                target_node = node_on_frontier;
-            }
-        }
-
-        if (target_node == -1) {
-            printf("IMPASSE. Aucun noeud de la frontière n'est accessible.\n");
-            free_noeuds(&plan_local);
-            break;
-        }
-
-        // --- ÉTAPE 3: SE DÉPLACER VERS LA DESTINATION CHOISIE ---
-        
-        int* chemin_vers_target = malloc(sizeof(int) * nb_cellules);
-        // Le dijkstra est parti de pos_actuelle, il faut donc reconstruire le chemin en inverse
-        int nb_etapes = reconstruire_chemin_inverse(&plan_local, pos_actuelle, target_node, nb_cellules, chemin_vers_target);
-        
-        free_noeuds(&plan_local); // Le plan local n'est plus nécessaire
-
-        printf("Cible la plus proche sur la frontière: %d. S'y rend en %d pas.\n", target_node, nb_etapes);
-
-        // Animer le déplacement
-        for (int i = 1; i < nb_etapes; i++) { // On commence à 1 car l'étape 0 est la pos_actuelle
-            pos_actuelle = chemin_vers_target[i];
-            passages_counts[pos_actuelle]++;
-            if (passages_counts[pos_actuelle] > max_passages) {
-                max_passages = passages_counts[pos_actuelle];
-            }
-
-            // Dessin
-            SDL_SetRenderDrawColor(rendu, 0, 0, 0, 255);
-            SDL_RenderClear(rendu);
-            dessiner_heatmap_passage(rendu, passages_counts, lignes, colonnes, max_passages);
-            for (int j = 0; j < nb_cellules; j++) dessiner_murs_connus(rendu, j % colonnes, j / colonnes, murs_connus, colonnes);
-            SDL_SetRenderDrawColor(rendu, 0, 255, 0, 255);
-            SDL_Rect dest_rect = {(destination_reelle % colonnes) * TAILLE_CELLULE, (destination_reelle / colonnes) * TAILLE_CELLULE, TAILLE_CELLULE, TAILLE_CELLULE};
-            SDL_RenderFillRect(rendu, &dest_rect); // Marquer la destination cachée
-            dessiner_personnage(rendu, perso_texture, (pos_actuelle % colonnes + 0.5f) * TAILLE_CELLULE, (pos_actuelle / colonnes + 0.5f) * TAILLE_CELLULE);
-            SDL_RenderPresent(rendu);
-            SDL_Delay(DELAI_PAS_EXPLORATION);
+        // "Pour chacun des noeuds fils dans V qui ne sont pas dans F ..."
+        for (int i = 0; i < 4; i++) {
+            int v = voisins[i];
+            if (v == -1) continue;
             
-            if (pos_actuelle == destination_reelle) {
-                destination_trouvee = true;
-                break;
+            // Observer la réalité pour ce voisin
+            int diff = v - pos_actuelle;
+            int dir_flag = 0;
+            if (diff == -colonnes) dir_flag = 1; else if (diff == 1) dir_flag = 2;
+            else if (diff == colonnes) dir_flag = 4; else if (diff == -1) dir_flag = 8;
+            
+            if (murs_reels[pos_actuelle] & dir_flag) { // S'il y a un mur dans la réalité
+                ajouter_mur(murs_connus, colonnes, pos_actuelle, v); // Apprendre
+            } else { // S'il n'y a pas de mur
+                // "si fils n’est pas dans F et si fils n’est pas encore dans O, le mettre dans O"
+                if (!noeuds_visites[v]) {
+                    bool deja_dans_O = false;
+                    for (int j = 0; j < frontier_size; j++) { if (frontier_nodes[j] == v) { deja_dans_O = true; break; } }
+                    if (!deja_dans_O) {
+                        frontier_nodes[frontier_size++] = v;
+                    }
+                }
             }
         }
-        free(chemin_vers_target);
-
     } // Fin de la boucle d'exploration principale
 
+    if(destination_trouvee) printf("Destination trouvée !\n");
     printf("Fin de la phase d'exploration.\n");
     SDL_Delay(3000);
 
-    // Nettoyage
+    // --- Nettoyage ---
     free(murs_connus);
     free(noeuds_visites);
     free(frontier_nodes);
@@ -433,6 +435,7 @@ void demarrer_exploration_inconnue(int* murs_reels, int lignes, int colonnes, in
     SDL_DestroyWindow(fenetre);
     SDL_Quit();
 }
+
 
 
 
@@ -455,11 +458,17 @@ int main() {
     for (int i = 0; i < nb_aretes_arbre; i++) supprimer_mur(murs_reels, colonnes, arbre[i].u, arbre[i].v);
     free(arbre);
 
-    lancer_animation_labyrinthe(murs_reels, lignes, colonnes);
+    //lancer_animation_labyrinthe(murs_reels, lignes, colonnes);
     //demarrer_exploration_dynamique(murs_reels, lignes, colonnes);
     
-    int destination_secrete = nb_cellules-1;
+    //int destination_secrete = nb_cellules-1;
     
+    // On choisit une destination cachée aléatoire (pas le point de départ)
+    int destination_secrete = 0;
+    do {
+        destination_secrete = rand() % nb_cellules;
+    } while (destination_secrete == 0);
+
     printf("La destination secrète est en %d\n", destination_secrete);
 
     demarrer_exploration_inconnue(murs_reels, lignes, colonnes, destination_secrete);
@@ -472,6 +481,70 @@ int main() {
     printf("Programme terminé.\n");
     return 0;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 /*
