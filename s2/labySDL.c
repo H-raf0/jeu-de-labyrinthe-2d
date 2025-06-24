@@ -301,6 +301,7 @@ void dessiner_fond(SDL_Renderer* rendu, noeud* n, int lignes, int colonnes) {
     }
 }
 
+
 // Dessine le plus court chemin en surbrillance
 void dessiner_chemin(SDL_Renderer* rendu, int* chemin, int nb_etapes, int colonnes) {
     SDL_SetRenderDrawColor(rendu, 255, 255, 0, 100); // Jaune semi-transparent
@@ -335,6 +336,27 @@ void dessiner_personnage(SDL_Renderer* rendu, SDL_Texture* perso_texture, float 
     SDL_RenderCopy(rendu, perso_texture, NULL, &dst_rect);
 }
 
+void dessiner_heatmap_passage(SDL_Renderer* rendu, int* passages, int lignes, int colonnes, int max_passages) {
+    if (max_passages == 0) return;
 
+    // Activer le blending pour la transparence
+    SDL_SetRenderDrawBlendMode(rendu, SDL_BLENDMODE_BLEND);
+
+    for (int i = 0; i < lignes * colonnes; i++) {
+        if (passages[i] > 0) {
+            // Le ratio détermine l'intensité. De 0 (pas passé) à 1 (le plus passé).
+            float ratio = (float)passages[i] / max_passages;
+            // On utilise la couleur rouge. L'alpha (transparence) crée l'effet de heatmap.
+            // 200 est une bonne valeur max pour l'alpha pour ne pas cacher complètement le fond.
+            Uint8 alpha = (Uint8)(ratio * 200);
+            
+            SDL_Rect case_rect = {(i % colonnes) * TAILLE_CELLULE, (i / colonnes) * TAILLE_CELLULE, TAILLE_CELLULE, TAILLE_CELLULE};
+            SDL_SetRenderDrawColor(rendu, 255, 100, 0, alpha); // Orange/Rouge
+            SDL_RenderFillRect(rendu, &case_rect);
+        }
+    }
+    // Rétablir le mode de dessin par défaut
+    SDL_SetRenderDrawBlendMode(rendu, SDL_BLENDMODE_NONE);
+}
 
 // ======================================================= fin Sdl ========================================
