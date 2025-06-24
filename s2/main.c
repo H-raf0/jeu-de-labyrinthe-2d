@@ -153,7 +153,22 @@ void demarrer_exploration_dynamique(int* murs_reels, int lignes, int colonnes) {
     bool quitter_programme = false;
 
 
+
+    // --- Création de la matrice d'adjacence ---
+    printf("Création de la matrice d'adjacence...\n");
+    int** graphe = NULL;
+    if (CURRENT_ALGO == 1) {
+        graphe = creer_matrice_adjacence(murs_reels, lignes, colonnes);
+        if (!graphe) {
+            fprintf(stderr, "Impossible de créer la matrice d'adjacence.\n");
+            return;
+        }
+    }
+
+
     while (!quitter_programme){
+
+        // if 2 monstre se raproche, aug cout d un deplacement dans la direction de l autre
 
         // --- Boucle Principale: L'agent se déplace case par case ---
         while (pos_actuelle != destination && !quitter_programme) {
@@ -164,8 +179,8 @@ void demarrer_exploration_dynamique(int* murs_reels, int lignes, int colonnes) {
                 
                 // PLANIFIER sur la base de la connaissance actuelle
                 noeud plan;
-                BFS_laby(murs_connus, lignes, colonnes, destination, &plan);
-
+                //BFS_laby(murs_connus, lignes, colonnes, destination, &plan);
+                Dijkstra_laby(graphe, lignes*colonnes, destination, &plan);
                 // Gérer les événements (comme la fermeture de la fenêtre)
                 SDL_Event e;
                 if (SDL_PollEvent(&e) && e.type == SDL_QUIT) {
@@ -260,6 +275,7 @@ void demarrer_exploration_dynamique(int* murs_reels, int lignes, int colonnes) {
 
     // Nettoyage final
     free(murs_connus);
+    liberer_matrice_adjacence(graphe, nb_cellules);
     SDL_DestroyTexture(perso_texture);
     SDL_DestroyRenderer(rendu);
     SDL_DestroyWindow(fenetre);
