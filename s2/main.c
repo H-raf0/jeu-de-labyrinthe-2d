@@ -449,7 +449,6 @@ void demarrer_exploration_inconnue(int* murs_reels, int lignes, int colonnes, in
 
 
 
-
 int main() {
     srand(time(NULL));
     int lignes = 20;
@@ -476,9 +475,8 @@ int main() {
     
     // On choisit une destination cachée aléatoire (pas le point de départ)
     int destination_secrete = 0;
-    do {
-        destination_secrete = rand() % nb_cellules;
-    } while (destination_secrete == 0);
+    
+    destination_secrete = rand() % (nb_cellules-1) + 1;
 
     printf("La destination secrète est en %d\n", destination_secrete);
 
