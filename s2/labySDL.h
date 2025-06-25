@@ -9,7 +9,7 @@
 #define TUILE_TAILLE 16
 #define TAILLE_CELLULE 50
 
-
+#define EPES 2 // epesseur des murs 
 
 // Tableau global contenant les zones du tileset
 extern SDL_Rect src_murs[16];

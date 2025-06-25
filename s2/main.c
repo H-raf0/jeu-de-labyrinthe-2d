@@ -56,7 +56,7 @@ void lancer_animation_labyrinthe(int* murs, int lignes, int colonnes) {
     printf("Création de la matrice d'adjacence...\n");
     int** graphe = NULL;
     if (CURRENT_ALGO == 1) {
-        graphe = creer_matrice_adjacence(murs, lignes, colonnes);
+        graphe = creer_matrice_adjacence_cout_altr(murs, lignes, colonnes);
         if (!graphe) {
             fprintf(stderr, "Impossible de créer la matrice d'adjacence.\n");
             return;
@@ -276,7 +276,7 @@ void demarrer_exploration_dynamique(int* murs_reels, int lignes, int colonnes) {
     SDL_Quit();
 }
 
-// G.I.D.I
+// G.I.D.I, 
 void demarrer_exploration_inconnue(int* murs_reels, int lignes, int colonnes, int destination_reelle) {
     int nb_cellules = lignes * colonnes;
     int depart = 0;
@@ -314,9 +314,20 @@ void demarrer_exploration_inconnue(int* murs_reels, int lignes, int colonnes, in
         
         // --- ÉTAPE 1: DÉCIDER DE LA PROCHAINE CIBLE SUR LA FRONTIÈRE ---
         // "rechercher un noeud de O à distance minimale de noeud (pos_actuelle)"
+
+        printf("Planification locale avec Dijkstra sur la base des coûts connus...\n");
+        // 1. Créer le "cerveau" pondéré de l'agent
+
+        //int** graphe_connu = creer_matrice_couts_connus(murs_connus, passages_counts, lignes, colonnes);
+        int** graphe_connu = creer_matrice_adjacence_connue(murs_connus, lignes, colonnes);
+        if (!graphe_connu) { printf("Erreur allocation graphe connu\n"); break; }
+
         noeud plan_vers_frontiere;
-        BFS_laby(murs_connus, lignes, colonnes, pos_actuelle, &plan_vers_frontiere);
-        
+        Dijkstra_laby(graphe_connu, nb_cellules, pos_actuelle, &plan_vers_frontiere);
+        liberer_matrice_adjacence(graphe_connu, nb_cellules);
+
+
+
         int target_node = -1;
         int min_dist = INF;
         for (int i = 0; i < frontier_size; i++) {
@@ -423,7 +434,7 @@ void demarrer_exploration_inconnue(int* murs_reels, int lignes, int colonnes, in
 
     if(destination_trouvee) printf("Destination trouvée !\n");
     printf("Fin de la phase d'exploration.\n");
-    SDL_Delay(3000);
+    SDL_Delay(1000);
 
     // --- Nettoyage ---
     free(murs_connus);
@@ -438,11 +449,10 @@ void demarrer_exploration_inconnue(int* murs_reels, int lignes, int colonnes, in
 
 
 
-
 int main() {
     srand(time(NULL));
-    int lignes = 15;
-    int colonnes = 20;
+    int lignes = 20;
+    int colonnes = 30;
     int nb_cellules = lignes * colonnes;
     
     arete *toutes_aretes;
@@ -465,9 +475,8 @@ int main() {
     
     // On choisit une destination cachée aléatoire (pas le point de départ)
     int destination_secrete = 0;
-    do {
-        destination_secrete = rand() % nb_cellules;
-    } while (destination_secrete == 0);
+    
+    destination_secrete = rand() % (nb_cellules-1) + 1;
 
     printf("La destination secrète est en %d\n", destination_secrete);
 
