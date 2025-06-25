@@ -11,17 +11,18 @@
 #define AI_MODE_SEARCH_ZONE 0 // Le monstre explore une zone
 #define AI_MODE_HUNT 1        // Le monstre voit le joueur et le chasse
 
-#define NOMBRE_MONSTRES 3
-#define SEUIL_DETECTION_HUNT 0      // Portée de la vue directe
-#define DUREE_PISTE 0             // La piste reste "chaude" pendant . frames
+#define NOMBRE_MONSTRES 2
+#define SEUIL_DETECTION_HUNT 6      // Portée de la vue directe
+#define DUREE_PISTE 100             // La piste reste "chaude" pendant . frames
 #define SEUIL_LAISSE 15 // Si le joueur est plus loin que 15 cases, le monstre se rapproche
 #define RAPP_CLDWN 50
 #define MEMOIRE_MAX 9999
 #define VITESSE_MONSTRE 10
 
 
-#define SAUT_COOLDOWN 120
+#define SAUT_COOLDOWN 0
 
+#define NOMBRE_PIECES 3 // Le joueur doit collecter . pièces pour gagner
 
 #define HEIGHT 20
 #define WIDTH 20
@@ -159,11 +160,12 @@ int gidc(Monstre* monstre, int* murs_reels, int lignes, int colonnes, int destin
 }
 
 
+// GIDC: Graphe Inconnu, Destination Connue
 int gidi(Monstre* monstre, int* murs_reels, int lignes, int colonnes) {
     int nb_cellules = lignes * colonnes;
 
     // --- 1. Observer les environs et mettre à jour la frontière ---
-    // (Cette partie reste identique)
+    // Cette partie reste inchangée, car elle ne fait pas de pathfinding.
     monstre->noeuds_visites_zone[monstre->pos] = true;
     for (int k = 0; k < monstre->frontier_size; k++) {
         if (monstre->frontier_nodes[k] == monstre->pos) {
@@ -195,12 +197,22 @@ int gidi(Monstre* monstre, int* murs_reels, int lignes, int colonnes) {
         }
     }
 
-    if (monstre->frontier_size == 0) return monstre->pos; // Exploration finie, on ne bouge pas.
+    if (monstre->frontier_size == 0) return monstre->pos;
 
-    // --- 2. Trouver la cible la plus proche sur la frontière ---
-    // (Cette partie reste identique)
+    // --- 2. Trouver la cible la plus proche sur la frontière avec DIJKSTRA ---
     noeud plan_vers_frontiere;
-    BFS_laby(monstre->murs_connus, lignes, colonnes, monstre->pos, &plan_vers_frontiere);
+    
+
+    //BFS_laby(monstre->murs_connus, lignes, colonnes, monstre->pos, &plan_vers_frontiere);
+
+    // On crée une matrice d'adjacence à partir de la connaissance du monstre
+    int** graphe_connu_1 = creer_matrice_adjacence_connue(monstre->murs_connus, lignes, colonnes);
+    if (!graphe_connu_1) { return monstre->pos; } // Sécurité
+    // On lance Dijkstra depuis la position actuelle
+    Dijkstra_laby(graphe_connu_1, nb_cellules, monstre->pos, &plan_vers_frontiere);
+    // On libère la mémoire de la matrice
+    liberer_matrice_adjacence(graphe_connu_1, nb_cellules);
+
     int target_node = -1;
     int min_dist = INF;
     for (int i = 0; i < monstre->frontier_size; i++) {
@@ -210,13 +222,20 @@ int gidi(Monstre* monstre, int* murs_reels, int lignes, int colonnes) {
             target_node = node_f;
         }
     }
-    free_noeuds(&plan_vers_frontiere);
-    if (target_node == -1) return monstre->pos; // Bloqué, on ne bouge pas.
+    free_noeuds(&plan_vers_frontiere); // On libère le plan qui n'est plus utile
+    if (target_node == -1) return monstre->pos;
 
-    // --- 3. Calculer le premier pas vers cette cible ---
-    // (Cette partie reste identique)
+    // --- 3. Calculer le premier pas vers cette cible avec DIJKSTRA ---
     noeud plan_vers_cible;
-    BFS_laby(monstre->murs_connus, lignes, colonnes, target_node, &plan_vers_cible);
+
+    // On recrée une matrice d'adjacence (nécessaire car la première a été libérée)
+    int** graphe_connu_2 = creer_matrice_adjacence_connue(monstre->murs_connus, lignes, colonnes);
+    if (!graphe_connu_2) { return monstre->pos; } // Sécurité
+    // On lance Dijkstra depuis la cible pour trouver le chemin retour
+    Dijkstra_laby(graphe_connu_2, nb_cellules, target_node, &plan_vers_cible);
+    // On libère la mémoire
+    liberer_matrice_adjacence(graphe_connu_2, nb_cellules);
+
     int prochain_pas_planifie = -1;
     if (plan_vers_cible.distance[monstre->pos] != INF) {
         prochain_pas_planifie = plan_vers_cible.parent[monstre->pos];
@@ -224,21 +243,19 @@ int gidi(Monstre* monstre, int* murs_reels, int lignes, int colonnes) {
     free_noeuds(&plan_vers_cible);
 
     if (prochain_pas_planifie == -1 || prochain_pas_planifie == monstre->pos) {
-        return monstre->pos; // Pas de chemin trouvé ou déjà sur place, on ne bouge pas.
+        return monstre->pos;
     }
     
-    // --- 4. NOUVELLE PARTIE : VÉRIFIER LE MOUVEMENT CONTRE LA RÉALITÉ ---
+    // --- 4. Vérifier le mouvement contre la réalité ---
     int diff = prochain_pas_planifie - monstre->pos;
     int direction_flag = 0;
     if (diff == -colonnes) direction_flag = 1; else if (diff == 1) direction_flag = 2; else if (diff == colonnes) direction_flag = 4; else if (diff == -1) direction_flag = 8;
 
     if (murs_reels[monstre->pos] & direction_flag) {
-        // Le chemin planifié est bloqué par un mur réel inconnu !
         apprendre_mur(monstre, monstre->pos, prochain_pas_planifie, colonnes);
-        return monstre->pos; // On ne bouge pas
+        return monstre->pos;
     } else {
-        // Le chemin est libre.
-        return prochain_pas_planifie; // On retourne le pas valide.
+        return prochain_pas_planifie;
     }
 }
 
@@ -293,6 +310,7 @@ void mettre_a_jour_monstre(Monstre* monstre, int joueur_pos, int* murs_reels, in
         case AI_MODE_HUNT:
             // GIDC: Calcule le prochain pas optimal vers le joueur
             prochaine_position_planifiee = gidc(monstre, murs_reels, lignes, colonnes, joueur_pos);
+            monstre->rapp_cooldown = 0;
             break;
         case AI_MODE_SEARCH_ZONE:
             // On vérifie si les conditions de repositionnement sont remplies
@@ -314,7 +332,7 @@ void mettre_a_jour_monstre(Monstre* monstre, int joueur_pos, int* murs_reels, in
                 }
             } else {
                 // On est arrivé à notre point de patrouille, on explore localement avec GIDI.
-                printf("Monstre %d : Cible de patrouille atteinte, exploration locale (GIDI).\n", monstre->pos);
+                //printf("Monstre %d : Cible de patrouille atteinte, exploration locale (GIDI).\n", monstre->pos);
                 prochaine_position_planifiee = gidi(monstre, murs_reels, lignes, colonnes);
                 if (monstre->rapp_cooldown >= 1){
                     printf("\ncooldown :%d\n", monstre->rapp_cooldown);
@@ -339,14 +357,47 @@ void mettre_a_jour_monstre(Monstre* monstre, int joueur_pos, int* murs_reels, in
     monstre->pos = prochaine_position_planifiee;
 }
 
+
+void dessiner_rayon_detection(SDL_Renderer* rendu, int centre_pos, int rayon, int lignes, int colonnes) {
+    int cx, cy;
+    indice_vers_coord(centre_pos, colonnes, &cx, &cy);
+
+    // Activer le mode de dessin "blend" pour gérer la transparence (alpha)
+    SDL_SetRenderDrawBlendMode(rendu, SDL_BLENDMODE_BLEND);
+    // Choisir une couleur semi-transparente (ici, un rouge très léger)
+    SDL_SetRenderDrawColor(rendu, 255, 100, 100, 25);
+
+    // On parcourt un carré de cases autour du monstre
+    for (int y = cy - rayon; y <= cy + rayon; y++) {
+        for (int x = cx - rayon; x <= cx + rayon; x++) {
+            // On s'assure que la case est bien dans les limites du labyrinthe
+            if (x >= 0 && x < colonnes && y >= 0 && y < lignes) {
+                // On calcule la distance de Manhattan
+                int dist = abs(x - cx) + abs(y - cy);
+                
+                // Si la case est dans le rayon de détection...
+                if (dist <= rayon) {
+                    // ... on dessine un rectangle de surbrillance dessus
+                    SDL_Rect case_rect = {x * TAILLE_CELLULE, y * TAILLE_CELLULE, TAILLE_CELLULE, TAILLE_CELLULE};
+                    SDL_RenderFillRect(rendu, &case_rect);
+                }
+            }
+        }
+    }
+
+    // Rétablir le mode de dessin par défaut pour ne pas affecter le reste du rendu
+    SDL_SetRenderDrawBlendMode(rendu, SDL_BLENDMODE_NONE);
+}
+
 // Fonction de jeu principale
 void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
     int nb_cellules = lignes * colonnes;
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_Window* fenetre = SDL_CreateWindow("Jeu IA Focalisée", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, colonnes * TAILLE_CELLULE, lignes * TAILLE_CELLULE, SDL_WINDOW_SHOWN);
+    SDL_Window* fenetre = SDL_CreateWindow("Jeu IA Focalisée", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, colonnes * TAILLE_CELLULE + 1, lignes * TAILLE_CELLULE, SDL_WINDOW_SHOWN);
     SDL_Renderer* rendu = SDL_CreateRenderer(fenetre, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     SDL_Texture* perso_texture = IMG_LoadTexture(rendu, "personnage.png");
     SDL_Texture* monstre_texture = IMG_LoadTexture(rendu, "monstre.png");
+    SDL_Texture* piece_texture = IMG_LoadTexture(rendu, "piece.png");
 
     // Initialisation du Joueur
     Joueur joueur;
@@ -373,6 +424,35 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
         m->rapp_cooldown = 0;
         m->move_cooldown = 1;//i * 2;
     }
+
+    //generation des pieces
+    int* pieces_pos = malloc(sizeof(int) * NOMBRE_PIECES);
+    int pieces_collectees = 0;
+    printf("Génération de %d pièces...\n", NOMBRE_PIECES);
+    for (int i = 0; i < NOMBRE_PIECES; i++) {
+        int pos;
+        bool position_valide;
+        do {
+            position_valide = true;
+            pos = rand() % nb_cellules; // Position aléatoire
+
+            // Vérifier que la position n'est pas celle du joueur
+            if (pos == joueur.pos) { position_valide = false; continue; }
+
+            // Vérifier que la position n'est pas celle d'un monstre
+            for(int j = 0; j < NOMBRE_MONSTRES; j++) {
+                if (pos == monstres[j].pos) { position_valide = false; break; }
+            }
+            if (!position_valide) continue;
+
+            // Vérifier que la position n'est pas déjà prise par une autre pièce
+            for (int k = 0; k < i; k++) {
+                if (pos == pieces_pos[k]) { position_valide = false; break; }
+            }
+        } while (!position_valide);
+        pieces_pos[i] = pos;
+    }
+
 
     bool quitter = false;
     SDL_Event e;
@@ -432,6 +512,21 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
             }
         }
 
+        // --- LOGIQUE DE COLLECTE DES PIÈCES ---
+        for (int i = 0; i < NOMBRE_PIECES; i++) {
+            // Si la pièce existe encore et que le joueur est dessus
+            if (pieces_pos[i] != -1 && joueur.pos == pieces_pos[i]) {
+                pieces_pos[i] = -1; // "Supprimer" la pièce
+                pieces_collectees++;
+                printf("Pièce collectée ! (%d / %d)\n", pieces_collectees, NOMBRE_PIECES);
+            }
+        }
+        
+        // --- CONDITION DE VICTOIRE ---
+        if (pieces_collectees == NOMBRE_PIECES) {
+            printf("VICTOIRE ! Toutes les pièces ont été collectées !\n");
+            quitter = true; // Termine la boucle de jeu
+        }
 
         for (int i = 0; i < NOMBRE_MONSTRES; i++) {
             mettre_a_jour_monstre(&monstres[i], joueur.pos, murs_reels, lignes, colonnes);
@@ -441,8 +536,25 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
         // --- DESSIN ---
         SDL_SetRenderDrawColor(rendu, 20, 0, 30, 255);
         SDL_RenderClear(rendu);
+
+        for (int i = 0; i < NOMBRE_PIECES; i++) {
+            if (pieces_pos[i] != -1) {
+                // On réutilise la fonction dessiner_personnage, car elle dessine un sprite à une position
+                dessiner_personnage(rendu, piece_texture, (pieces_pos[i] % colonnes + 0.5f) * TAILLE_CELLULE, (pieces_pos[i] / colonnes + 0.5f) * TAILLE_CELLULE);
+            }
+        }
+
+
         SDL_SetRenderDrawColor(rendu, 100, 80, 200, 255);
         for (int i = 0; i < nb_cellules; i++) dessiner_murs(rendu, i % colonnes, i / colonnes, murs_reels, colonnes);
+        
+        for (int i = 0; i < NOMBRE_MONSTRES; i++) {
+            if (monstres[i].mode == AI_MODE_HUNT) {
+                dessiner_rayon_detection(rendu, monstres[i].pos, SEUIL_DETECTION_HUNT, lignes, colonnes);
+            }
+        }
+
+        
         dessiner_personnage(rendu, perso_texture, (joueur.pos % colonnes + 0.5f) * TAILLE_CELLULE, (joueur.pos / colonnes + 0.5f) * TAILLE_CELLULE);
         for (int i = 0; i < NOMBRE_MONSTRES; i++) {
             if(monstres[i].mode == AI_MODE_HUNT) SDL_SetTextureColorMod(monstre_texture, 255, 100, 100); // Rouge
@@ -453,6 +565,8 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
         SDL_RenderPresent(rendu);
     }
 
+    free(pieces_pos); // Ne pas oublier de libérer le tableau des pièces
+
     for (int i = 0; i < NOMBRE_MONSTRES; i++) {
         free(monstres[i].murs_connus);
         free(monstres[i].memoire_murs);
@@ -461,6 +575,7 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
     }
     SDL_DestroyTexture(perso_texture);
     SDL_DestroyTexture(monstre_texture);
+    SDL_DestroyTexture(piece_texture); 
     SDL_DestroyRenderer(rendu);
     SDL_DestroyWindow(fenetre); SDL_Quit();
 }
