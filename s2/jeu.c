@@ -12,11 +12,23 @@
 #define AI_MODE_HUNT 1        // Le monstre voit le joueur et le chasse
 
 #define NOMBRE_MONSTRES 3
-#define SEUIL_DETECTION_HUNT 8      // Portée de la vue directe
-#define DUREE_PISTE 300             // La piste reste "chaude" pendant 300 frames
-#define TAILLE_ZONE_RECHERCHE 12
-#define MEMOIRE_MAX 50
-#define VITESSE_MONSTRE 5
+#define SEUIL_DETECTION_HUNT 3      // Portée de la vue directe
+#define DUREE_PISTE 10000             // La piste reste "chaude" pendant . frames
+#define SEUIL_LAISSE 15 // Si le joueur est plus loin que 15 cases, le monstre se rapproche
+#define RAPP_CLDWN 500
+#define MEMOIRE_MAX 9999
+#define VITESSE_MONSTRE 10
+
+#define HEIGHT 20
+#define WIDTH 20
+
+#ifndef max
+#define max(a,b) ((a) > (b) ? (a) : (b))
+#endif
+#ifndef min
+#define min(a,b) ((a) < (b) ? (a) : (b))
+#endif
+
 
 typedef struct {
     int pos;
@@ -32,8 +44,24 @@ typedef struct {
     // Variables pour le chemin en cours
     int prochaine_position;
 
+    int drnier_pos_jr_connu;
+
+    int rapp_cooldown;
     int move_cooldown;
 } Monstre;
+
+
+void melanger_voisins(int* tableau, int n) {
+    if (n > 1) {
+        for (int i = n - 1; i > 0; i--) {
+            int j = rand() % (i + 1);
+            int temp = tableau[i];
+            tableau[i] = tableau[j];
+            tableau[j] = temp;
+        }
+    }
+}
+
 
 // Gère l'apprentissage et l'oubli des murs
 void apprendre_mur(Monstre* monstre, int u, int v, int colonnes) {
@@ -57,101 +85,151 @@ void apprendre_mur(Monstre* monstre, int u, int v, int colonnes) {
 
 
 
-int gidc(int* murs_reels, int* murs_connus,int lignes, int colonnes, int depart, int destination) {
+// GIDC: Graphe Inconnu, Destination Connue
+int gidc(Monstre* monstre, int* murs_reels, int lignes, int colonnes, int destination) {
     int nb_cellules = lignes * colonnes;
+    int depart = monstre->pos;
 
-    if (!murs_connus) { return NULL; }
+    // Planifier le chemin sur la carte connue
+    int** graphe_connu = creer_matrice_adjacence_connue(monstre->murs_connus, lignes, colonnes);
+    if (!graphe_connu) { return depart; } 
 
-    int pos_actuelle = depart;
+    noeud plan;
+    Dijkstra_laby(graphe_connu, nb_cellules, destination, &plan);
+    
+    // Trouver le meilleur voisin pour se rapprocher
+    int meilleur_voisin = -1;
+    int min_dist_estimee = INF;
+    int x_act, y_act;
+    indice_vers_coord(depart, colonnes, &x_act, &y_act);
+    int voisins[4] = {
+        (y_act > 0) ? (y_act - 1) * colonnes + x_act : -1, (x_act < colonnes - 1) ? y_act * colonnes + (x_act + 1) : -1,
+        (y_act < lignes - 1) ? (y_act + 1) * colonnes + x_act : -1, (x_act > 0) ? y_act * colonnes + (x_act - 1) : -1
+    };
 
-    bool a_transite = false;
-    while (!a_transite) {
+    for (int i = 0; i < 4; i++) {
+        int v = voisins[i]; 
+        if (v == -1) continue;
         
-        int** graphe_connu = creer_matrice_adjacence_connue(murs_connus, lignes, colonnes); // ? cout=1
-        if (!graphe_connu) {
-            fprintf(stderr, "Erreur création graphe connu.\n");
-            pos_actuelle = destination;
-            continue;
-        }
-
-        noeud plan;
-        // On planifie avec Dijkstra sur ce graphe frais
-        Dijkstra_laby(graphe_connu, nb_cellules, destination, &plan);
+        int diff_temp = v - depart; 
+        int dir_flag_temp = 0;
+        if (diff_temp == -colonnes) dir_flag_temp = 1; else if (diff_temp == 1) dir_flag_temp = 2; else if (diff_temp == colonnes) dir_flag_temp = 4; else if (diff_temp == -1) dir_flag_temp = 8;
         
-        int meilleur_voisin = -1;
-        int min_dist_estimee = INF;
-        int x_act, y_act;
-        indice_vers_coord(pos_actuelle, colonnes, &x_act, &y_act);
-
-        int voisins[4] = {
-            (y_act > 0) ? (y_act - 1) * colonnes + x_act : -1,
-            (x_act < colonnes - 1) ? y_act * colonnes + (x_act + 1) : -1,
-            (y_act < lignes - 1) ? (y_act + 1) * colonnes + x_act : -1,
-            (x_act > 0) ? y_act * colonnes + (x_act - 1) : -1
-        };
-
-        for (int i = 0; i < 4; i++) {
-            int v = voisins[i];
-            if (v == -1) continue;
-            
-            int diff_temp = v - pos_actuelle;
-            int direction_flag_temp = 0;
-            if (diff_temp == -colonnes) direction_flag_temp = 1; else if (diff_temp == 1) direction_flag_temp = 2;
-            else if (diff_temp == colonnes) direction_flag_temp = 4; else if (diff_temp == -1) direction_flag_temp = 8;
-            
-            if (!(murs_connus[pos_actuelle] & direction_flag_temp)) {
-                if (plan.distance[v] < min_dist_estimee) {
-                    min_dist_estimee = plan.distance[v];
-                    meilleur_voisin = v;
-                }
+        if (!(monstre->murs_connus[depart] & dir_flag_temp)) {
+            if (plan.distance[v] < min_dist_estimee) { 
+                min_dist_estimee = plan.distance[v]; 
+                meilleur_voisin = v; 
             }
         }
+    }
+    free_noeuds(&plan);
+    liberer_matrice_adjacence(graphe_connu, nb_cellules);
 
-        if (meilleur_voisin == -1) {
-            printf("IMPASSE CONNUE. L'agent ne peut plus bouger.\n");
-            pos_actuelle = destination;
-            // Nettoyer avant de continuer ---
-            free_noeuds(&plan);
-            liberer_matrice_adjacence(graphe_connu, nb_cellules);
-            continue;
-        }
+    if (meilleur_voisin == -1) { 
+        return depart; // Bloqué selon sa carte, il ne bouge pas
+    }
 
-        int diff = meilleur_voisin - pos_actuelle;
-        int direction_flag = 0;
-        if (diff == -colonnes) direction_flag = 1; else if (diff == 1) direction_flag = 2;
-        else if (diff == colonnes) direction_flag = 4; else if (diff == -1) direction_flag = 8;
+    // Valider le mouvement contre la réalité
+    int diff = meilleur_voisin - depart; 
+    int direction_flag = 0;
+    if (diff == -colonnes) direction_flag = 1; else if (diff == 1) direction_flag = 2; else if (diff == colonnes) direction_flag = 4; else if (diff == -1) direction_flag = 8;
 
-        if (murs_reels[pos_actuelle] & direction_flag) {
-            printf("SURPRISE! Mur de %d à %d. Apprentissage...\n", pos_actuelle, meilleur_voisin);
-            ajouter_mur(murs_connus, colonnes, pos_actuelle, meilleur_voisin);
-        } else {
-            printf("Mouvement de %d à %d.\n", pos_actuelle, meilleur_voisin);
-            pos_actuelle = meilleur_voisin;
-            a_transite = true;
-            
-        }
-        
-        // Le "cerveau" est détruit ici, à la fin de chaque décision ---
-        free_noeuds(&plan);
-        liberer_matrice_adjacence(graphe_connu, nb_cellules);
-
-    } 
-    return pos_actuelle; //nouvelle position
-
+    if (murs_reels[depart] & direction_flag) {
+        // Collision ! Apprendre et ne pas bouger.
+        apprendre_mur(monstre, depart, meilleur_voisin, colonnes);
+        return depart;
+    } else {
+        // Pas de collision, le mouvement est valide.
+        return meilleur_voisin;
+    }
 }
 
 
-int gidi(/* ? */){
-
-    /* */
-}
-
-
-
-// "Cerveau" de l'IA: prend UNE décision et la prépare pour exécution
-void mettre_a_jour_monstre(Monstre* monstre, int joueur_pos, int* murs_reels, int lignes, int colonnes) {
+int gidi(Monstre* monstre, int* murs_reels, int lignes, int colonnes) {
     int nb_cellules = lignes * colonnes;
 
+    // --- 1. Observer les environs et mettre à jour la frontière ---
+    // (Cette partie reste identique)
+    monstre->noeuds_visites_zone[monstre->pos] = true;
+    for (int k = 0; k < monstre->frontier_size; k++) {
+        if (monstre->frontier_nodes[k] == monstre->pos) {
+            monstre->frontier_nodes[k] = monstre->frontier_nodes[--monstre->frontier_size];
+            break;
+        }
+    }
+    int x_act, y_act;
+    indice_vers_coord(monstre->pos, colonnes, &x_act, &y_act);
+    int voisins[4] = {
+        (y_act > 0) ? (y_act - 1) * colonnes + x_act : -1, (x_act < colonnes - 1) ? y_act * colonnes + (x_act + 1) : -1,
+        (y_act < lignes - 1) ? (y_act + 1) * colonnes + x_act : -1, (x_act > 0) ? y_act * colonnes + (x_act - 1) : -1
+    };
+    melanger_voisins(voisins, 4);
+    for (int i = 0; i < 4; i++) {
+        int v = voisins[i];
+        if (v == -1) continue;
+        int diff = v - monstre->pos;
+        int dir_flag = 0;
+        if (diff == -colonnes) dir_flag = 1; else if (diff == 1) dir_flag = 2; else if (diff == colonnes) dir_flag = 4; else if (diff == -1) dir_flag = 8;
+        if (murs_reels[monstre->pos] & dir_flag) {
+            apprendre_mur(monstre, monstre->pos, v, colonnes);
+        } else {
+            if (!monstre->noeuds_visites_zone[v]) {
+                bool deja_dans_frontiere = false;
+                for (int j = 0; j < monstre->frontier_size; j++) { if (monstre->frontier_nodes[j] == v) { deja_dans_frontiere = true; break; } }
+                if (!deja_dans_frontiere) { monstre->frontier_nodes[monstre->frontier_size++] = v; }
+            }
+        }
+    }
+
+    if (monstre->frontier_size == 0) return monstre->pos; // Exploration finie, on ne bouge pas.
+
+    // --- 2. Trouver la cible la plus proche sur la frontière ---
+    // (Cette partie reste identique)
+    noeud plan_vers_frontiere;
+    BFS_laby(monstre->murs_connus, lignes, colonnes, monstre->pos, &plan_vers_frontiere);
+    int target_node = -1;
+    int min_dist = INF;
+    for (int i = 0; i < monstre->frontier_size; i++) {
+        int node_f = monstre->frontier_nodes[i];
+        if (plan_vers_frontiere.distance[node_f] < min_dist) {
+            min_dist = plan_vers_frontiere.distance[node_f];
+            target_node = node_f;
+        }
+    }
+    free_noeuds(&plan_vers_frontiere);
+    if (target_node == -1) return monstre->pos; // Bloqué, on ne bouge pas.
+
+    // --- 3. Calculer le premier pas vers cette cible ---
+    // (Cette partie reste identique)
+    noeud plan_vers_cible;
+    BFS_laby(monstre->murs_connus, lignes, colonnes, target_node, &plan_vers_cible);
+    int prochain_pas_planifie = -1;
+    if (plan_vers_cible.distance[monstre->pos] != INF) {
+        prochain_pas_planifie = plan_vers_cible.parent[monstre->pos];
+    }
+    free_noeuds(&plan_vers_cible);
+
+    if (prochain_pas_planifie == -1 || prochain_pas_planifie == monstre->pos) {
+        return monstre->pos; // Pas de chemin trouvé ou déjà sur place, on ne bouge pas.
+    }
+    
+    // --- 4. NOUVELLE PARTIE : VÉRIFIER LE MOUVEMENT CONTRE LA RÉALITÉ ---
+    int diff = prochain_pas_planifie - monstre->pos;
+    int direction_flag = 0;
+    if (diff == -colonnes) direction_flag = 1; else if (diff == 1) direction_flag = 2; else if (diff == colonnes) direction_flag = 4; else if (diff == -1) direction_flag = 8;
+
+    if (murs_reels[monstre->pos] & direction_flag) {
+        // Le chemin planifié est bloqué par un mur réel inconnu !
+        apprendre_mur(monstre, monstre->pos, prochain_pas_planifie, colonnes);
+        return monstre->pos; // On ne bouge pas
+    } else {
+        // Le chemin est libre.
+        return prochain_pas_planifie; // On retourne le pas valide.
+    }
+}
+
+
+void mettre_a_jour_monstre(Monstre* monstre, int joueur_pos, int* murs_reels, int lignes, int colonnes) {
     // --- PERCEPTION & DÉCISION DU MODE ---
     int j_x, j_y, m_x, m_y;
     indice_vers_coord(joueur_pos, colonnes, &j_x, &j_y);
@@ -159,78 +237,86 @@ void mettre_a_jour_monstre(Monstre* monstre, int joueur_pos, int* murs_reels, in
     int distance = abs(j_x - m_x) + abs(j_y - m_y);
 
     if (monstre->timer_piste > 0) monstre->timer_piste--;
+    
 
     int old_mode = monstre->mode;
     
-    // La chasse. Si le joueur est assez proche ou sa fait pas longtemps qu'il s'est s'échapé, on le chasse.
-    if (distance <= SEUIL_DETECTION_HUNT || monstre->timer_piste > 0) {
+    
+    if (distance <= SEUIL_DETECTION_HUNT) {
         monstre->mode = AI_MODE_HUNT;
-        if (distance <= SEUIL_DETECTION_HUNT) monstre->timer_piste = DUREE_PISTE; 
+        if (old_mode != AI_MODE_HUNT) printf("Monstre %d -> MODE CHASSE (Détection directe)\n", monstre->pos);
+        monstre->drnier_pos_jr_connu = joueur_pos;
+        monstre->timer_piste = DUREE_PISTE;
     } 
-    // La recherche. Si on a perdu le joueur..
+    else if (monstre->timer_piste > 0) {
+        monstre->mode = AI_MODE_HUNT;
+        if (old_mode != AI_MODE_HUNT) printf("Monstre %d -> MODE CHASSE (Poursuite de la piste)\n", monstre->pos);
+    } 
     else {
         monstre->mode = AI_MODE_SEARCH_ZONE;
-    }
-
-    // Si on vient de changer de mode, on annule le plan en cours
-    if (monstre->mode != old_mode) {
-        if(monstre->mode == AI_MODE_SEARCH_ZONE) {
-            printf("Monstre %d -> MODE RECHERCHE DE ZONE\n", monstre->pos);
-            // On définit la zone de recherche autour de la position REELLE du joueur (comme s'il entendait un bruit)
-            int zone_centre_x = j_x;
-            int zone_centre_y = j_y;
-            
-            // On réinitialise O et F
+        if (old_mode != AI_MODE_SEARCH_ZONE){
+            printf("Monstre %d -> MODE RECHERCHE (Piste perdue)\n", monstre->pos);
+            // On s'assure que la cible de patrouille est la position actuelle pour commencer par explorer localement
+            monstre->drnier_pos_jr_connu = monstre->pos; 
             monstre->frontier_size = 0;
-            memset(monstre->noeuds_visites_zone, 0, sizeof(bool) * nb_cellules);
+            memset(monstre->noeuds_visites_zone, 0, sizeof(bool) * (lignes*colonnes));
             monstre->frontier_nodes[monstre->frontier_size++] = monstre->pos;
-            
         }
     }
 
+    
+    // --- ACTION ---
+    if (monstre->move_cooldown > 0) {
+        monstre->move_cooldown--;
+        return; // Pas encore l'heure de bouger
+    }
+    monstre->move_cooldown = VITESSE_MONSTRE;
 
-
-    // ---  PLANIFICATION  ---
+    // --- PLANIFICATION ET MISE À JOUR DE la `prochaine_position` ---
+    int prochaine_position_planifiee = monstre->pos;
     
     switch (monstre->mode) {
         case AI_MODE_HUNT:
-            monstre->prochaine_position = gidc(murs_reels, monstre->murs_connus, lignes, colonnes, monstre->pos, joueur_pos);
+            // GIDC: Calcule le prochain pas optimal vers le joueur
+            prochaine_position_planifiee = gidc(monstre, murs_reels, lignes, colonnes, joueur_pos);
             break;
         case AI_MODE_SEARCH_ZONE:
-        { 
-            //?
-        
-        }
+            // On vérifie si les conditions de repositionnement sont remplies
+            
+            // 2. Phase de déplacement ou d'exploration
+            if (monstre->pos != monstre->drnier_pos_jr_connu && monstre->rapp_cooldown == 0) {
+                // Si on n'est pas encore à notre point de patrouille, on s'y dirige.
+                prochaine_position_planifiee = gidc(monstre, murs_reels, lignes, colonnes, monstre->drnier_pos_jr_connu);
+                
+                // Si on est bloqué en route, on explore pour trouver une issue
+                if (prochaine_position_planifiee == monstre->pos) {
+                    printf("Monstre %d : Bloqué en route vers la cible de patrouille, exploration GIDI en secours.\n", monstre->pos);
+                    prochaine_position_planifiee = gidi(monstre, murs_reels, lignes, colonnes);
+                }
+            } else {
+                // On est arrivé à notre point de patrouille, on explore localement avec GIDI.
+                printf("Monstre %d : Cible de patrouille atteinte, exploration locale (GIDI).\n", monstre->pos);
+                prochaine_position_planifiee = gidi(monstre, murs_reels, lignes, colonnes);
+                if (monstre->rapp_cooldown > 0){
+                    monstre->rapp_cooldown--;
+                }else {
+                    monstre->rapp_cooldown = RAPP_CLDWN;
+                    monstre->drnier_pos_jr_connu = joueur_pos;
+                }
+            }
+            
+            // 3. Dernier recours si GIDI ne trouve rien à explorer
+            if (prochaine_position_planifiee == monstre->pos) { 
+                printf("Monstre %d a fini sa recherche locale, choisit une destination de patrouille aléatoire.\n", monstre->pos);
+                monstre->drnier_pos_jr_connu = joueur_pos; // La nouvelle cible est aléatoire
+                prochaine_position_planifiee = gidc(monstre, murs_reels, lignes, colonnes, monstre->drnier_pos_jr_connu);
+            }
+            break;
     }
-    
 
-    // --- C. ACTION ---
-    if (monstre->move_cooldown > 0) { monstre->move_cooldown--; return; }
-    monstre->move_cooldown = VITESSE_MONSTRE;
-
-    int prochain_pas = -1;
-    if (monstre->mode == AI_MODE_HUNT) {
-        if (monstre->pos != joueur_pos) {
-            prochain_pas = monstre->prochaine_position;
-        }
-    } else if (monstre->mode == AI_MODE_SEARCH_ZONE) {
-        
-    }
-
-    if (prochain_pas != -1) {
-        int diff = prochain_pas - monstre->pos;
-        int dir_flag = 0;
-        if (diff == -colonnes) dir_flag = 1; else if (diff == 1) dir_flag = 2; else if (diff == colonnes) dir_flag = 4; else if (diff == -1) dir_flag = 8;
-        
-        if (murs_reels[monstre->pos] & dir_flag) {
-            apprendre_mur(monstre, monstre->pos, prochain_pas, colonnes);
-        } else {
-            monstre->pos = prochain_pas;
-            // ?
-        }
-    }
+    // --- EXÉCUTION DU MOUVEMENT ---  
+    monstre->pos = prochaine_position_planifiee;
 }
-
 
 // Fonction de jeu principale
 void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
@@ -257,8 +343,9 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
         m->frontier_size = 0;
 
         m->prochaine_position = nb_cellules - 1 - i * 2;
-
-        m->move_cooldown = 5;//i * 2;
+        m->drnier_pos_jr_connu = 0; // = pos de depart du jr 
+        m->rapp_cooldown = RAPP_CLDWN;
+        m->move_cooldown = 1;//i * 2;
     }
 
     bool quitter = false;
@@ -311,7 +398,6 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
         free(monstres[i].memoire_murs);
         free(monstres[i].noeuds_visites_zone);
         free(monstres[i].frontier_nodes);
-        free(monstres[i].chemin_actuel);
     }
     SDL_DestroyTexture(perso_texture);
     SDL_DestroyTexture(monstre_texture);
@@ -321,8 +407,8 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
 
 int main() {
     srand(time(NULL));
-    int lignes = 20;
-    int colonnes = 30;
+    int lignes = HEIGHT;
+    int colonnes = WIDTH;
     int nb_cellules = lignes * colonnes;
     
     arete *toutes_aretes;

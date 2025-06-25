@@ -276,7 +276,7 @@ void demarrer_exploration_dynamique(int* murs_reels, int lignes, int colonnes) {
     SDL_Quit();
 }
 
-// G.I.D.I, matrice adj 2D à 1D 
+// G.I.D.I, 
 void demarrer_exploration_inconnue(int* murs_reels, int lignes, int colonnes, int destination_reelle) {
     int nb_cellules = lignes * colonnes;
     int depart = 0;

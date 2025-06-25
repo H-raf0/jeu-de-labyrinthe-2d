@@ -7,7 +7,7 @@
 #include "structures.h"
 // Constantes
 #define TUILE_TAILLE 16
-#define TAILLE_CELLULE 50
+#define TAILLE_CELLULE 20
 
 #define EPES 2 // epesseur des murs 
 
