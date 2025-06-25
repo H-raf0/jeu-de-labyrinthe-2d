@@ -12,12 +12,16 @@
 #define AI_MODE_HUNT 1        // Le monstre voit le joueur et le chasse
 
 #define NOMBRE_MONSTRES 3
-#define SEUIL_DETECTION_HUNT 3      // Portée de la vue directe
-#define DUREE_PISTE 10000             // La piste reste "chaude" pendant . frames
+#define SEUIL_DETECTION_HUNT 0      // Portée de la vue directe
+#define DUREE_PISTE 0             // La piste reste "chaude" pendant . frames
 #define SEUIL_LAISSE 15 // Si le joueur est plus loin que 15 cases, le monstre se rapproche
-#define RAPP_CLDWN 500
+#define RAPP_CLDWN 50
 #define MEMOIRE_MAX 9999
 #define VITESSE_MONSTRE 10
+
+
+#define SAUT_COOLDOWN 120
+
 
 #define HEIGHT 20
 #define WIDTH 20
@@ -49,6 +53,16 @@ typedef struct {
     int rapp_cooldown;
     int move_cooldown;
 } Monstre;
+
+
+
+typedef struct {
+    int pos;
+    int direction; // La direction vers laquelle le joueur fait face (1:Haut, 2:Droite, 4:Bas, 8:Gauche)
+    int saut_cooldown;
+} Joueur;
+
+
 
 
 void melanger_voisins(int* tableau, int n) {
@@ -288,29 +302,36 @@ void mettre_a_jour_monstre(Monstre* monstre, int joueur_pos, int* murs_reels, in
                 // Si on n'est pas encore à notre point de patrouille, on s'y dirige.
                 prochaine_position_planifiee = gidc(monstre, murs_reels, lignes, colonnes, monstre->drnier_pos_jr_connu);
                 
+                /*
                 // Si on est bloqué en route, on explore pour trouver une issue
                 if (prochaine_position_planifiee == monstre->pos) {
                     printf("Monstre %d : Bloqué en route vers la cible de patrouille, exploration GIDI en secours.\n", monstre->pos);
                     prochaine_position_planifiee = gidi(monstre, murs_reels, lignes, colonnes);
+                }*/
+
+                if (prochaine_position_planifiee == monstre->drnier_pos_jr_connu) {
+                    monstre->rapp_cooldown = RAPP_CLDWN;
                 }
             } else {
                 // On est arrivé à notre point de patrouille, on explore localement avec GIDI.
                 printf("Monstre %d : Cible de patrouille atteinte, exploration locale (GIDI).\n", monstre->pos);
                 prochaine_position_planifiee = gidi(monstre, murs_reels, lignes, colonnes);
-                if (monstre->rapp_cooldown > 0){
+                if (monstre->rapp_cooldown >= 1){
+                    printf("\ncooldown :%d\n", monstre->rapp_cooldown);
                     monstre->rapp_cooldown--;
-                }else {
-                    monstre->rapp_cooldown = RAPP_CLDWN;
+                }
+                if (monstre->rapp_cooldown == 1){
+                    //monstre->rapp_cooldown = RAPP_CLDWN;
                     monstre->drnier_pos_jr_connu = joueur_pos;
                 }
             }
-            
+            /*
             // 3. Dernier recours si GIDI ne trouve rien à explorer
             if (prochaine_position_planifiee == monstre->pos) { 
                 printf("Monstre %d a fini sa recherche locale, choisit une destination de patrouille aléatoire.\n", monstre->pos);
                 monstre->drnier_pos_jr_connu = joueur_pos; // La nouvelle cible est aléatoire
                 prochaine_position_planifiee = gidc(monstre, murs_reels, lignes, colonnes, monstre->drnier_pos_jr_connu);
-            }
+            }*/
             break;
     }
 
@@ -327,7 +348,12 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
     SDL_Texture* perso_texture = IMG_LoadTexture(rendu, "personnage.png");
     SDL_Texture* monstre_texture = IMG_LoadTexture(rendu, "monstre.png");
 
-    int joueur_pos = 0;
+    // Initialisation du Joueur
+    Joueur joueur;
+    joueur.pos = 0;
+    joueur.direction = 4; // Commence en regardant vers le bas
+    joueur.saut_cooldown = 0;
+
     Monstre monstres[NOMBRE_MONSTRES];
     for (int i = 0; i < NOMBRE_MONSTRES; i++) {
         Monstre* m = &monstres[i];
@@ -344,19 +370,23 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
 
         m->prochaine_position = nb_cellules - 1 - i * 2;
         m->drnier_pos_jr_connu = 0; // = pos de depart du jr 
-        m->rapp_cooldown = RAPP_CLDWN;
+        m->rapp_cooldown = 0;
         m->move_cooldown = 1;//i * 2;
     }
 
     bool quitter = false;
     SDL_Event e;
     while (!quitter) {
+        // Décrémenter le cooldown du saut du joueur à chaque frame
+        if (joueur.saut_cooldown > 0) {
+            joueur.saut_cooldown--;
+        }
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) {
                 quitter = true;
             }
             if (e.type == SDL_KEYDOWN) {
-                int nouvelle_pos = joueur_pos;
+                int nouvelle_pos = joueur.pos;
                 int direction_flag = 0;
 
                 switch (e.key.keysym.sym) {
@@ -364,18 +394,48 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
                     case SDLK_DOWN:  nouvelle_pos += colonnes; direction_flag = 4; break;
                     case SDLK_LEFT:  nouvelle_pos -= 1;        direction_flag = 8; break;
                     case SDLK_RIGHT: nouvelle_pos += 1;        direction_flag = 2; break;
+                    case SDLK_SPACE: 
+                        // On ne peut sauter que si le cooldown est terminé
+                        if (joueur.saut_cooldown == 0) {
+                            int pos_apres_saut = -1;
+                            // On vérifie s'il y a bien un mur dans la direction où le joueur regarde
+                            if (murs_reels[joueur.pos] & joueur.direction) {
+                                // Calculer la position de l'autre côté du mur
+                                if (joueur.direction == 1) pos_apres_saut = joueur.pos - colonnes; // HAUT
+                                else if (joueur.direction == 4) pos_apres_saut = joueur.pos + colonnes; // BAS
+                                else if (joueur.direction == 8) pos_apres_saut = joueur.pos - 1;       // GAUCHE
+                                else if (joueur.direction == 2) pos_apres_saut = joueur.pos + 1;       // DROITE
+                                
+                                // Vérifier que la case d'atterrissage est valide (dans le labyrinthe)
+                                int x, y;
+                                indice_vers_coord(pos_apres_saut, colonnes, &x, &y);
+                                if (x >= 0 && x < colonnes && y >= 0 && y < lignes) {
+                                    printf("Le joueur a sauté par-dessus un mur !\n");
+                                    joueur.pos = pos_apres_saut;
+                                    joueur.saut_cooldown = SAUT_COOLDOWN; // Activer le cooldown
+                                }
+                            }
+                        }
+                        // On met le flag à 0 pour ne pas entrer dans la logique de marche normale
+                        direction_flag = 0;
+                        break;
                 }
-                // Vérifier si le mouvement est valide (pas de mur)
-                if (!(murs_reels[joueur_pos] & direction_flag)) {
-                    joueur_pos = nouvelle_pos;
+                // Si une touche de direction a été pressée
+                if (direction_flag != 0) {
+                    // On met à jour la direction dans laquelle le joueur regarde
+                    joueur.direction = direction_flag;
+                    // On vérifie si le mouvement est valide (pas de mur)
+                    if (!(murs_reels[joueur.pos] & direction_flag)) {
+                        joueur.pos = nouvelle_pos;
+                    }
                 }
             }
         }
 
 
         for (int i = 0; i < NOMBRE_MONSTRES; i++) {
-            mettre_a_jour_monstre(&monstres[i], joueur_pos, murs_reels, lignes, colonnes);
-            if (monstres[i].pos == joueur_pos) { printf("GAME OVER !\n"); quitter = true; }
+            mettre_a_jour_monstre(&monstres[i], joueur.pos, murs_reels, lignes, colonnes);
+            if (monstres[i].pos == joueur.pos) { printf("GAME OVER !\n"); quitter = true; }
         }
 
         // --- DESSIN ---
@@ -383,7 +443,7 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
         SDL_RenderClear(rendu);
         SDL_SetRenderDrawColor(rendu, 100, 80, 200, 255);
         for (int i = 0; i < nb_cellules; i++) dessiner_murs(rendu, i % colonnes, i / colonnes, murs_reels, colonnes);
-        dessiner_personnage(rendu, perso_texture, (joueur_pos % colonnes + 0.5f) * TAILLE_CELLULE, (joueur_pos / colonnes + 0.5f) * TAILLE_CELLULE);
+        dessiner_personnage(rendu, perso_texture, (joueur.pos % colonnes + 0.5f) * TAILLE_CELLULE, (joueur.pos / colonnes + 0.5f) * TAILLE_CELLULE);
         for (int i = 0; i < NOMBRE_MONSTRES; i++) {
             if(monstres[i].mode == AI_MODE_HUNT) SDL_SetTextureColorMod(monstre_texture, 255, 100, 100); // Rouge
             else if (monstres[i].mode == AI_MODE_SEARCH_ZONE) SDL_SetTextureColorMod(monstre_texture, 255, 255, 100); // Jaune
@@ -406,7 +466,9 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
 }
 
 int main() {
-    srand(time(NULL));
+    unsigned int seed = time(NULL);
+    srand(seed);
+    printf("seed de la labyrinth est : %u\n", seed);
     int lignes = HEIGHT;
     int colonnes = WIDTH;
     int nb_cellules = lignes * colonnes;
