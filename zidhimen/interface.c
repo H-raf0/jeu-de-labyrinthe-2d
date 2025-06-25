@@ -20,140 +20,8 @@ typedef enum {
     HARD,
     DIFFICULTY_COUNT // Vaut 3, pratique pour les calculs
 } DifficultyLevel;
-
-
 // ===================================================================================
-// IMPLÉMENTATION DES NOUVELLES FONCTIONS
-// ===================================================================================
-
-/**
- * @brief Initialise la SDL, la fenêtre et le renderer.
- * @param window Pointeur vers le pointeur de la fenêtre SDL.
- * @param renderer Pointeur vers le pointeur du renderer SDL.
- * @return true si l'initialisation a réussi, false sinon.
- */
-bool init_sdl(SDL_Window** window, SDL_Renderer** renderer) {
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-        printf("Erreur d'initialisation de la SDL : %s\n", SDL_GetError());
-        return false;
-    }
-    if (!(IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG)) {
-        printf("Erreur d'initialisation de SDL_image : %s\n", IMG_GetError());
-        return false;
-    }
-
-    *window = SDL_CreateWindow("Menu à Défilement Parallaxe", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, 0);
-    if (!*window) {
-        printf("Erreur de création de la fenêtre : %s\n", SDL_GetError());
-        return false;
-    }
-
-    *renderer = SDL_CreateRenderer(*window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    if (!*renderer) {
-        printf("Erreur de création du renderer : %s\n", SDL_GetError());
-        return false;
-    }
-    return true;
-}
-
-/**
- * @brief Charge les images de fond, initialise leurs vitesses et positions.
- */
-void load_parallax_assets(SDL_Renderer* renderer, SDL_Texture* layers[], float speeds[], float x1[], float x2[]) {
-    char filename[16];
-    for (int i = 0; i < NUM_LAYERS; i++) {
-        snprintf(filename, sizeof(filename), "bg%d.png", i);
-        layers[i] = IMG_LoadTexture(renderer, filename);
-        if (!layers[i]) {
-            printf("Erreur: Impossible de charger '%s'.\n", filename);
-        }
-        speeds[i] = 0.5f + (float)i * 0.75f;
-        x1[i] = 0.0f;
-        x2[i] = (float)SCREEN_WIDTH;
-    }
-}
-
-/**
- * @brief Gère tous les événements utilisateur (souris, fermeture de fenêtre).
- * @param running Pointeur vers le booléen de la boucle principale.
- * @param difficulty Pointeur vers le niveau de difficulté actuel.
- * @param play_rect Rectangle du bouton "Jouer".
- * @param quit_rect Rectangle du bouton "Quitter".
- * @param left_arrow Rectangle de la flèche gauche de difficulté.
- * @param right_arrow Rectangle de la flèche droite de difficulté.
- */
-void handle_events(bool* running, DifficultyLevel* difficulty, const SDL_Rect* play_rect, const SDL_Rect* quit_rect, const SDL_Rect* left_arrow, const SDL_Rect* right_arrow) {
-    SDL_Event event;
-    while (SDL_PollEvent(&event)) {
-        if (event.type == SDL_QUIT) {
-            *running = false;
-        }
-        if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
-            SDL_Point mouse_pos = {event.button.x, event.button.y};
-            if (SDL_PointInRect(&mouse_pos, play_rect)) { printf("Lancement du jeu !\n"); }
-            if (SDL_PointInRect(&mouse_pos, left_arrow)) { *difficulty = (*difficulty - 1 + DIFFICULTY_COUNT) % DIFFICULTY_COUNT; }
-            if (SDL_PointInRect(&mouse_pos, right_arrow)) { *difficulty = (*difficulty + 1) % DIFFICULTY_COUNT; }
-            if (SDL_PointInRect(&mouse_pos, quit_rect)) { *running = false; }
-        }
-    }
-}
-
-/**
- * @brief Met à jour la position des images de fond pour créer l'effet de parallaxe.
- */
-void update_parallax(float speeds[], float x1[], float x2[]) {
-    for (int i = 0; i < NUM_LAYERS; i++) {
-        x1[i] -= speeds[i];
-        x2[i] -= speeds[i];
-        if (x1[i] <= -SCREEN_WIDTH) { x1[i] = x2[i] + SCREEN_WIDTH; }
-        if (x2[i] <= -SCREEN_WIDTH) { x2[i] = x1[i] + SCREEN_WIDTH; }
-    }
-}
-
-/**
- * @brief Dessine l'ensemble de la scène (fond et menu).
- */
-void render_all(SDL_Renderer* renderer, SDL_Texture* layers[], float x1[], float x2[], const SDL_Rect* play_rect, const SDL_Rect* diff_rect, const SDL_Rect* quit_rect, DifficultyLevel difficulty) {
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    SDL_RenderClear(renderer);
-
-    // 1. Dessiner le fond en parallaxe
-    for (int i = 0; i < NUM_LAYERS; i++) {
-        if (layers[i]) {
-            SDL_Rect dst1 = {(int)x1[i], 0, SCREEN_WIDTH, SCREEN_HEIGHT};
-            SDL_RenderCopy(renderer, layers[i], NULL, &dst1);
-            SDL_Rect dst2 = {(int)x2[i], 0, SCREEN_WIDTH, SCREEN_HEIGHT};
-            SDL_RenderCopy(renderer, layers[i], NULL, &dst2);
-        }
-    }
-
-    // 2. Dessiner les boutons
-    SDL_Point mouse_pos;
-    SDL_GetMouseState(&mouse_pos.x, &mouse_pos.y);
-    draw_decorated_button(renderer, (SDL_Rect*)play_rect, "play", difficulty, SDL_PointInRect(&mouse_pos, play_rect));
-    draw_decorated_button(renderer, (SDL_Rect*)diff_rect, "difficulty", difficulty, SDL_PointInRect(&mouse_pos, diff_rect));
-    draw_decorated_button(renderer, (SDL_Rect*)quit_rect, "quit", difficulty, SDL_PointInRect(&mouse_pos, quit_rect));
-
-    // Mettre à jour l'écran
-    SDL_RenderPresent(renderer);
-}
-
-/**
- * @brief Libère toutes les ressources allouées.
- */
-void cleanup(SDL_Window* window, SDL_Renderer* renderer, SDL_Texture* layers[]) {
-    for (int i = 0; i < NUM_LAYERS; i++) {
-        if (layers[i]) SDL_DestroyTexture(layers[i]);
-    }
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    IMG_Quit();
-    SDL_Quit();
-}
-
-
-// ===================================================================================
-// IMPLÉMENTATION DES FONCTIONS DE DESSIN (INCHANGÉES)
+// IMPLÉMENTATION DES FONCTIONS DE DESSIN
 // ===================================================================================
 
 /*
@@ -235,26 +103,44 @@ void draw_decorated_button(SDL_Renderer* renderer, SDL_Rect* rect, const char* i
     // Rétablir le mode de rendu par défaut
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 }
+
 // ===================================================================================
-// FONCTION PRINCIPALE (SIMPLIFIÉE)
+// FONCTION PRINCIPALE
 // ===================================================================================
 int main(int argc, char* argv[]) {
-    (void)argc; (void)argv; // Marquer comme non utilisés
+    // Marquer les paramètres comme non utilisés pour éviter les avertissements du compilateur
+    (void)argc;
+    (void)argv;
 
-    // --- Variables ---
-    SDL_Window* window = NULL;
-    SDL_Renderer* renderer = NULL;
+    // --- Initialisation de SDL ---
+    SDL_Init(SDL_INIT_VIDEO);
+    IMG_Init(IMG_INIT_PNG);
+
+    SDL_Window* window = SDL_CreateWindow("Menu à Défilement Parallaxe", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, 0);
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    
+    // MODIF 1 : Tableau pour "traduire" l'enum en chaîne de caractères pour l'affichage.
+    // L'ordre doit correspondre à l'enum : EASY=0, MEDIUM=1, HARD=2.
+    const char* difficulty_names[] = {"Facile", "Moyen", "Difficile"};
+
+    // --- Gestion du Parallaxe (avec correction du bug de découpage) ---
     SDL_Texture* layers[NUM_LAYERS];
-    float speeds[NUM_LAYERS], x1[NUM_LAYERS], x2[NUM_LAYERS];
-    DifficultyLevel current_difficulty = EASY;
-
-    // --- Initialisation ---
-    if (!init_sdl(&window, &renderer)) {
-        return 1; // Quitte si l'initialisation échoue
+    float speeds[NUM_LAYERS];
+    float x1[NUM_LAYERS], x2[NUM_LAYERS];
+    char filename[16];
+    for (int i = 0; i < NUM_LAYERS; i++) {
+        snprintf(filename, sizeof(filename), "bg%d.png", i);
+        layers[i] = IMG_LoadTexture(renderer, filename);
+        if (!layers[i]) {
+            printf("Erreur: Impossible de charger '%s'.\n", filename);
+        }
+        speeds[i] = 0.5f + (float)i * 0.75f;
+        x1[i] = 0.0f;
+        x2[i] = (float)SCREEN_WIDTH;
     }
-    load_parallax_assets(renderer, layers, speeds, x1, x2);
 
-    // --- Définition des éléments de l'interface (UI) ---
+    // --- Variables du Menu ---
+    DifficultyLevel current_difficulty = EASY;
     int button_width = 280, button_height = 70;
     int center_x = (SCREEN_WIDTH - button_width) / 2;
     SDL_Rect play_rect = {center_x, 150, button_width, button_height};
@@ -265,22 +151,73 @@ int main(int argc, char* argv[]) {
 
     // --- Boucle Principale ---
     bool running = true;
+    SDL_Event event;
     while (running) {
-        // 1. Gérer les entrées utilisateur
-        handle_events(&running, ¤t_difficulty, &play_rect, &quit_rect, &diff_left_arrow_rect, &diff_right_arrow_rect);
+        // MODIF 2 : Mémoriser la difficulté AVANT de traiter les événements.
+        DifficultyLevel old_difficulty = current_difficulty;
 
-        // 2. Mettre à jour l'état du jeu (ici, juste le fond)
-        update_parallax(speeds, x1, x2);
+        // --- Gestion des Événements ---
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_QUIT) running = false;
+            
+            if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
+                SDL_Point mouse_pos = {event.button.x, event.button.y};
+                
+                // MODIF 3 : Utiliser le tableau `difficulty_names` pour afficher le bon niveau.
+                if (SDL_PointInRect(&mouse_pos, &play_rect)) { 
+                    printf("Lancement du jeu niveau %s !\n", difficulty_names[current_difficulty]); 
+                }
+                
+                if (SDL_PointInRect(&mouse_pos, &diff_left_arrow_rect)) { current_difficulty = (current_difficulty - 1 + DIFFICULTY_COUNT) % DIFFICULTY_COUNT; }
+                if (SDL_PointInRect(&mouse_pos, &diff_right_arrow_rect)) { current_difficulty = (current_difficulty + 1) % DIFFICULTY_COUNT; }
+                if (SDL_PointInRect(&mouse_pos, &quit_rect)) { running = false; }
+            }
+        }
         
-        // 3. Dessiner tout à l'écran
-        render_all(renderer, layers, x1, x2, &play_rect, &diff_rect, &quit_rect, current_difficulty);
+        // MODIF 4 : Vérifier si la difficulté a changé APRES avoir traité les événements.
+        if (old_difficulty != current_difficulty) {
+            printf("Changement de difficulté -> Niveau %s\n", difficulty_names[current_difficulty]);
+        }
+
+
+        // --- Rendu Graphique ---
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderClear(renderer);
         
-        // Viser ~60 FPS
+        // 1. DESSINER LE FOND EN PARALLAXE AUTOMATIQUE (CORRIGÉ)
+        for (int i = 0; i < NUM_LAYERS; i++) {
+            if (layers[i]) {
+                x1[i] -= speeds[i];
+                x2[i] -= speeds[i];
+                if (x1[i] <= -SCREEN_WIDTH) { x1[i] = x2[i] + SCREEN_WIDTH; }
+                if (x2[i] <= -SCREEN_WIDTH) { x2[i] = x1[i] + SCREEN_WIDTH; }
+                SDL_Rect dst1 = {(int)x1[i], 0, SCREEN_WIDTH, SCREEN_HEIGHT};
+                SDL_RenderCopy(renderer, layers[i], NULL, &dst1);
+                SDL_Rect dst2 = {(int)x2[i], 0, SCREEN_WIDTH, SCREEN_HEIGHT};
+                SDL_RenderCopy(renderer, layers[i], NULL, &dst2);
+            }
+        }
+        
+        // 2. DESSINER LES BOUTONS PAR-DESSUS
+        SDL_Point mouse_pos;
+        SDL_GetMouseState(&mouse_pos.x, &mouse_pos.y);
+        draw_decorated_button(renderer, &play_rect, "play", current_difficulty, SDL_PointInRect(&mouse_pos, &play_rect));
+        draw_decorated_button(renderer, &diff_rect, "difficulty", current_difficulty, SDL_PointInRect(&mouse_pos, &diff_rect));
+        draw_decorated_button(renderer, &quit_rect, "quit", current_difficulty, SDL_PointInRect(&mouse_pos, &quit_rect));
+
+        // Mettre à jour l'écran
+        SDL_RenderPresent(renderer);
         SDL_Delay(16);
     }
 
     // --- Libération des Ressources ---
-    cleanup(window, renderer, layers);
+    for (int i = 0; i < NUM_LAYERS; i++) {
+        if (layers[i]) SDL_DestroyTexture(layers[i]);
+    }
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    IMG_Quit();
+    SDL_Quit();
+
     return 0;
 }
-
