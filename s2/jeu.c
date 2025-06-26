@@ -453,6 +453,7 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
         m->move_cooldown = 1;//i * 2;
     }
 
+    
     //generation des pieces
     int* pieces_pos = malloc(sizeof(int) * NOMBRE_PIECES);
     int pieces_collectees = 0;
@@ -565,6 +566,9 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
         SDL_SetRenderDrawColor(rendu, 20, 0, 30, 255);
         SDL_RenderClear(rendu);
 
+        //dessin de bg
+        dessiner_bg(rendu, murs_reels, lignes, colonnes);
+
         for (int i = 0; i < NOMBRE_PIECES; i++) {
             if (pieces_pos[i] != -1) {
                 // On réutilise la fonction dessiner_personnage, car elle dessine un sprite à une position
@@ -574,8 +578,10 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
 
 
         SDL_SetRenderDrawColor(rendu, 100, 80, 200, 255);
-        for (int i = 0; i < nb_cellules; i++) dessiner_murs(rendu, i % colonnes, i / colonnes, murs_reels, colonnes);
         
+
+        for (int i = 0; i < nb_cellules; i++) dessiner_murs_connus(rendu, i % colonnes, i / colonnes, murs_reels, colonnes);
+
         for (int i = 0; i < NOMBRE_MONSTRES; i++) {
             if (monstres[i].mode == AI_MODE_HUNT) {
                 dessiner_rayon_detection(rendu, monstres[i].pos, SEUIL_DETECTION_HUNT, lignes, colonnes);

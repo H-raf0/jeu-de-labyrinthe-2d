@@ -132,7 +132,7 @@ void lancer_animation_labyrinthe(int* murs, int lignes, int colonnes) {
         dessiner_fond(rendu, &n, lignes, colonnes);
         dessiner_chemin(rendu, chemin, nb_etapes, colonnes);
         SDL_SetRenderDrawColor(rendu, 255, 255, 255, 255);
-        for (int i = 0; i < nb_cellules; i++) dessiner_murs(rendu, i % colonnes, i / colonnes, murs, colonnes);
+        for (int i = 0; i < nb_cellules; i++) dessiner_murs_connus(rendu, i % colonnes, i / colonnes, murs, colonnes);
         dessiner_marqueurs(rendu, depart, destination, colonnes);
         dessiner_personnage(rendu, perso_texture, perso_x, perso_y);
         SDL_RenderPresent(rendu);

@@ -29,24 +29,14 @@ SDL_Rect src_murs[16] = {
 
 //============================== SDL =================================================================
 
-// Dessine les murs d'une cellule donnée avec SDL
-void dessiner_murs(SDL_Renderer* rendu, int x, int y, int *murs, int colonnes) {
-    int px = x * TAILLE_CELLULE;
-    int py = y * TAILLE_CELLULE;
-    int val = murs[y * colonnes + x];
-    if (val & 1) SDL_RenderDrawLine(rendu, px, py, px + TAILLE_CELLULE, py); // haut
-    if (val & 2) SDL_RenderDrawLine(rendu, px + TAILLE_CELLULE, py, px + TAILLE_CELLULE, py + TAILLE_CELLULE); // droite
-    if (val & 4) SDL_RenderDrawLine(rendu, px, py + TAILLE_CELLULE, px + TAILLE_CELLULE, py + TAILLE_CELLULE); // bas
-    if (val & 8) SDL_RenderDrawLine(rendu, px, py, px, py + TAILLE_CELLULE); // gauche
-}
+
 
 void dessiner_murs_connus(SDL_Renderer* rendu, int x, int y, int *murs, int colonnes) {
     // Garder la couleur originale pour la restaurer plus tard si besoin
     Uint8 r, g, b, a;
     SDL_GetRenderDrawColor(rendu, &r, &g, &b, &a);
 
-    // Mettre la couleur des murs connus en gris
-    SDL_SetRenderDrawColor(rendu, 100, 100, 100, 255);
+    SDL_SetRenderDrawColor(rendu, 255, 165, 0, 255);
 
     int px = x * TAILLE_CELLULE;
     int py = y * TAILLE_CELLULE;
@@ -89,7 +79,7 @@ void afficher_labyrinthe_sdl(arete arbre[], int nb_aretes, int lignes, int colon
     SDL_SetRenderDrawColor(rendu, 0, 255, 0, 255);
     for (int y = 0; y < lignes; y++)
         for (int x = 0; x < colonnes; x++)
-            dessiner_murs(rendu, x, y, murs, colonnes);
+            dessiner_murs_connus(rendu, x, y, murs, colonnes);
     SDL_RenderPresent(rendu);
     SDL_Event e;
     int quitter = 0;
@@ -120,6 +110,76 @@ void dessiner_tuile(SDL_Renderer* rendu, SDL_Texture* tileset, int* murs, int x,
     
     SDL_RenderCopy(rendu, tileset, &src, &dst);
 }
+
+
+
+
+
+
+void dessiner_tuile_v2(SDL_Renderer* rendu, SDL_Texture* tileset, const int* murs, int x, int y, int colonnes){
+    
+
+    SDL_Rect dst; // Le rectangle de destination SUR l'écran
+    int p_extra = 0;
+    // Définition des rectangles source pour nos deux seules tuiles
+    SDL_Rect src_sol = {2 * TUILE_TAILLE, 2 * TUILE_TAILLE, TUILE_TAILLE, TUILE_TAILLE};
+
+    // On définit où dessiner la tuile à l'écran et sa taille
+    dst.x = x * TAILLE_CELLULE + p_extra;
+    dst.y = y * TAILLE_CELLULE + p_extra;
+    dst.w = TAILLE_CELLULE - p_extra;
+    dst.h = TAILLE_CELLULE - p_extra;
+
+    SDL_RenderCopy(rendu, tileset, &src_sol, &dst);
+
+}
+
+
+void dessiner_bg(SDL_Renderer* rendu, const int* murs, int lignes, int colonnes) {
+    // Charger l'image comme surface
+    SDL_Surface* tileset_surface = IMG_Load("tileset2.png");
+    if (!tileset_surface) {
+        fprintf(stderr, "Erreur chargement tileset2.png : %s\n", IMG_GetError());
+        return;
+    }
+
+    // Créer une texture depuis la surface
+    SDL_Texture* tileset = SDL_CreateTextureFromSurface(rendu, tileset_surface);
+    if (!tileset) {
+        fprintf(stderr, "Erreur création texture : %s\n", SDL_GetError());
+        SDL_FreeSurface(tileset_surface);
+        return;
+    }
+
+    SDL_FreeSurface(tileset_surface);
+
+    // Fond bleu foncé
+    //SDL_SetRenderDrawColor(rendu, 11, 14, 42, 255);
+    //SDL_RenderClear(rendu);
+
+    // Boucle pour dessiner chaque tuile
+    for (int y = 0; y < lignes; y++) {
+        for (int x = 0; x < colonnes; x++) {
+            dessiner_tuile_v2(rendu, tileset, murs, x, y, colonnes);
+        }
+    }
+
+    SDL_DestroyTexture(tileset);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -180,6 +240,7 @@ void afficher_labyrinthe_sdl_tuiles(int *murs, int lignes, int colonnes) {
     SDL_DestroyWindow(fenetre);
     SDL_Quit();
 }
+
 
 
 void afficher_labyrinthe_resolu_sdl(int *murs, int lignes, int colonnes, int depart, int destination) {
@@ -256,7 +317,7 @@ void afficher_labyrinthe_resolu_sdl(int *murs, int lignes, int colonnes, int dep
     SDL_SetRenderDrawColor(rendu, 255, 255, 255, 255); // Murs en blanc
     for (int y = 0; y < lignes; y++) {
         for (int x = 0; x < colonnes; x++) {
-            dessiner_murs(rendu, x, y, murs, colonnes);
+            dessiner_murs_connus(rendu, x, y, murs, colonnes);
         }
     }
 
