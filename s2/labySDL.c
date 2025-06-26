@@ -274,7 +274,7 @@ void dessiner_rayon_detection(SDL_Renderer* rendu, int centre_pos, int rayon, in
     indice_vers_coord(centre_pos, colonnes, &cx, &cy);
 
     SDL_SetRenderDrawBlendMode(rendu, SDL_BLENDMODE_BLEND);
-    SDL_SetRenderDrawColor(rendu, 255, 100, 100, 25);
+    SDL_SetRenderDrawColor(rendu, 255, 100, 100, 75);
 
     for (int y = cy - rayon; y <= cy + rayon; y++) {
         for (int x = cx - rayon; x <= cx + rayon; x++) {

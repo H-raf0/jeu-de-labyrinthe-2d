@@ -107,9 +107,9 @@ int main(int argc, char* argv[]) {
 
     // MODIFICATION MAJEURE : On charge 3 textures dans un tableau
     SDL_Texture* animation_textures[4]; // UP, DOWN, LEFT, RIGHT
-    animation_textures[DOWN]  = load_texture_from_image("/home/local.isima.fr/ilnasrat/shared/projetzz1aiz/s2/Pixel Crawler - Free Pack/Entities/Characters/Body_A/Animations/Carry_Run/Carry_Run_Down-Sheet.png", window, renderer);
-    animation_textures[RIGHT] = load_texture_from_image("/home/local.isima.fr/ilnasrat/shared/projetzz1aiz/s2/Pixel Crawler - Free Pack/Entities/Characters/Body_A/Animations/Carry_Run/Carry_Run_Side-Sheet.png", window, renderer);
-    animation_textures[UP]    = load_texture_from_image("/home/local.isima.fr/ilnasrat/shared/projetzz1aiz/s2/Pixel Crawler - Free Pack/Entities/Characters/Body_A/Animations/Carry_Run/Carry_Run_Up-Sheet.png", window, renderer);
+    animation_textures[DOWN]  = load_texture_from_image("Carry_Run_Down-Sheet.png", window, renderer);
+    animation_textures[RIGHT] = load_texture_from_image("Carry_Run_Side-Sheet.png", window, renderer);
+    animation_textures[UP]    = load_texture_from_image("Carry_Run_Up-Sheet.png", window, renderer);
     animation_textures[LEFT]  = animation_textures[RIGHT]; // Pour la gauche, on réutilise la texture de droite
 
     // Calculer la taille d'une seule frame (on suppose que toutes les images ont la même taille de frame)
