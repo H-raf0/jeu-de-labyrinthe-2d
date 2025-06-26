@@ -175,6 +175,38 @@ void dessiner_bg(SDL_Renderer* rendu, int lignes, int colonnes) {
 
 
 
+void dessiner_rayon_detection(SDL_Renderer* rendu, int centre_pos, int rayon, int lignes, int colonnes) {
+    int cx, cy;
+    indice_vers_coord(centre_pos, colonnes, &cx, &cy);
+
+    // Activer le mode de dessin "blend" pour gérer la transparence (alpha)
+    SDL_SetRenderDrawBlendMode(rendu, SDL_BLENDMODE_BLEND);
+    // Choisir une couleur semi-transparente (ici, un rouge très léger)
+    SDL_SetRenderDrawColor(rendu, 255, 100, 100, 25);
+
+    // On parcourt un carré de cases autour du monstre
+    for (int y = cy - rayon; y <= cy + rayon; y++) {
+        for (int x = cx - rayon; x <= cx + rayon; x++) {
+            // On s'assure que la case est bien dans les limites du labyrinthe
+            if (x >= 0 && x < colonnes && y >= 0 && y < lignes) {
+                // On calcule la distance de Manhattan
+                int dist = abs(x - cx) + abs(y - cy);
+                
+                // Si la case est dans le rayon de détection...
+                if (dist <= rayon) {
+                    // ... on dessine un rectangle de surbrillance dessus
+                    SDL_Rect case_rect = {x * TAILLE_CELLULE, y * TAILLE_CELLULE, TAILLE_CELLULE, TAILLE_CELLULE};
+                    SDL_RenderFillRect(rendu, &case_rect);
+                }
+            }
+        }
+    }
+
+    // Rétablir le mode de dessin par défaut pour ne pas affecter le reste du rendu
+    SDL_SetRenderDrawBlendMode(rendu, SDL_BLENDMODE_NONE);
+}
+
+
 
 
 

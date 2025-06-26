@@ -386,42 +386,13 @@ void mettre_a_jour_monstre(Monstre* monstres, int monstre_index, int joueur_pos,
 }
 
 
-void dessiner_rayon_detection(SDL_Renderer* rendu, int centre_pos, int rayon, int lignes, int colonnes) {
-    int cx, cy;
-    indice_vers_coord(centre_pos, colonnes, &cx, &cy);
 
-    // Activer le mode de dessin "blend" pour gérer la transparence (alpha)
-    SDL_SetRenderDrawBlendMode(rendu, SDL_BLENDMODE_BLEND);
-    // Choisir une couleur semi-transparente (ici, un rouge très léger)
-    SDL_SetRenderDrawColor(rendu, 255, 100, 100, 25);
-
-    // On parcourt un carré de cases autour du monstre
-    for (int y = cy - rayon; y <= cy + rayon; y++) {
-        for (int x = cx - rayon; x <= cx + rayon; x++) {
-            // On s'assure que la case est bien dans les limites du labyrinthe
-            if (x >= 0 && x < colonnes && y >= 0 && y < lignes) {
-                // On calcule la distance de Manhattan
-                int dist = abs(x - cx) + abs(y - cy);
-                
-                // Si la case est dans le rayon de détection...
-                if (dist <= rayon) {
-                    // ... on dessine un rectangle de surbrillance dessus
-                    SDL_Rect case_rect = {x * TAILLE_CELLULE, y * TAILLE_CELLULE, TAILLE_CELLULE, TAILLE_CELLULE};
-                    SDL_RenderFillRect(rendu, &case_rect);
-                }
-            }
-        }
-    }
-
-    // Rétablir le mode de dessin par défaut pour ne pas affecter le reste du rendu
-    SDL_SetRenderDrawBlendMode(rendu, SDL_BLENDMODE_NONE);
-}
 
 // Fonction de jeu principale
 void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
     int nb_cellules = lignes * colonnes;
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_Window* fenetre = SDL_CreateWindow("Jeu IA Focalisée", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, colonnes * TAILLE_CELLULE + 1, lignes * TAILLE_CELLULE, SDL_WINDOW_SHOWN);
+    SDL_Window* fenetre = SDL_CreateWindow("Le Jeu", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, colonnes * TAILLE_CELLULE + 1, lignes * TAILLE_CELLULE, SDL_WINDOW_SHOWN);
     SDL_Renderer* rendu = SDL_CreateRenderer(fenetre, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     SDL_Texture* perso_texture = IMG_LoadTexture(rendu, "personnage.png");
     SDL_Texture* monstre_texture = IMG_LoadTexture(rendu, "monstre.png");
@@ -594,14 +565,13 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
         dessiner_personnage(rendu, perso_texture, (joueur.pos % colonnes + 0.5f) * TAILLE_CELLULE, (joueur.pos / colonnes + 0.5f) * TAILLE_CELLULE);
         for (int i = 0; i < NOMBRE_MONSTRES; i++) {
             if(monstres[i].mode == AI_MODE_HUNT) SDL_SetTextureColorMod(monstre_texture, 255, 100, 100); // Rouge
-            else if (monstres[i].mode == AI_MODE_SEARCH_ZONE) SDL_SetTextureColorMod(monstre_texture, 255, 255, 100); // Jaune
-            else SDL_SetTextureColorMod(monstre_texture, 100, 255, 100); // Vert
+            else if (monstres[i].mode == AI_MODE_SEARCH_ZONE) SDL_SetTextureColorMod(monstre_texture, 100, 255, 100); // Jaune
             dessiner_personnage(rendu, monstre_texture, (monstres[i].pos % colonnes + 0.5f) * TAILLE_CELLULE, (monstres[i].pos / colonnes + 0.5f) * TAILLE_CELLULE);
         }
         SDL_RenderPresent(rendu);
     }
 
-    free(pieces_pos); // Ne pas oublier de libérer le tableau des pièces
+    free(pieces_pos); // libérer le tableau des pièces
 
     for (int i = 0; i < NOMBRE_MONSTRES; i++) {
         free(monstres[i].murs_connus);
@@ -641,5 +611,3 @@ int main() {
     printf("Programme terminé.\n");
     return 0;
 }
-
-//je l'aime pas, pourquoi pas faire comme bfs avec une liste des murs, mais on augmente 15 pour augmentez le poids, par eexemple one 15 represente les 4 premier bits 1111, on a peut ajoutez

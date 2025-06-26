@@ -5,9 +5,9 @@
 #include "laby.h"
 #include "labySDL.h"
 
-#define CURRENT_ALGO 2
+#define CURRENT_ALGO 0
 // 0 BFS, 1 DIJSKTRA, 2 A*
-#define VITESSE 0.2f
+#define VITESSE 0.5f
 
 #define CURRENT_HEURISTIC HEURISTIC_MANHATTAN // HEURISTIC_MANHATTAN ou HEURISTIC_EUCLIDEAN ou HEURISTIC_TCHEBYCHEV
 
@@ -256,7 +256,7 @@ void demarrer_exploration_dynamique(int* murs_reels, int lignes, int colonnes) {
                 SDL_Delay(DELAI_PAS);
             }
             
-            // --- CORRECTION: Le "cerveau" est détruit ici, à la fin de chaque décision ---
+            // --- Le "cerveau" est détruit ici, à la fin de chaque décision ---
             free_noeuds(&plan);
             liberer_matrice_adjacence(graphe_connu, nb_cellules);
 
@@ -295,7 +295,7 @@ void demarrer_exploration_inconnue(int* murs_reels, int lignes, int colonnes, in
 
     // --- Initialisation SDL ---
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_Window* fenetre = SDL_CreateWindow("Exploration (Spec. Annonce)", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, colonnes * TAILLE_CELLULE, lignes * TAILLE_CELLULE, SDL_WINDOW_SHOWN);
+    SDL_Window* fenetre = SDL_CreateWindow("Exploration", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, colonnes * TAILLE_CELLULE, lignes * TAILLE_CELLULE, SDL_WINDOW_SHOWN);
     SDL_Renderer* rendu = SDL_CreateRenderer(fenetre, -1, SDL_RENDERER_ACCELERATED);
     SDL_Texture* perso_texture = IMG_LoadTexture(rendu, "personnage.png");
 
@@ -450,7 +450,10 @@ void demarrer_exploration_inconnue(int* murs_reels, int lignes, int colonnes, in
 
 
 int main() {
+    unsigned int seed = time(NULL);
+    printf("seed est : %u", seed);
     srand(1);
+
     int lignes = 20;
     int colonnes = 30;
     int nb_cellules = lignes * colonnes;
@@ -468,19 +471,21 @@ int main() {
     for (int i = 0; i < nb_aretes_arbre; i++) supprimer_mur(murs_reels, colonnes, arbre[i].u, arbre[i].v);
     free(arbre);
 
-    lancer_animation_labyrinthe(murs_reels, lignes, colonnes);
+    //lancer_animation_labyrinthe(murs_reels, lignes, colonnes);
+    //gidc
     //demarrer_exploration_dynamique(murs_reels, lignes, colonnes);
     
     //int destination_secrete = nb_cellules-1;
     
     // On choisit une destination cachée aléatoire (pas le point de départ)
-    int destination_secrete = 0;
+    int destination_secrete;
     
     destination_secrete = rand() % (nb_cellules-1) + 1;
 
     printf("La destination secrète est en %d\n", destination_secrete);
 
-    //demarrer_exploration_inconnue(murs_reels, lignes, colonnes, destination_secrete);
+    //gidi
+    demarrer_exploration_inconnue(murs_reels, lignes, colonnes, destination_secrete);
     
     
     

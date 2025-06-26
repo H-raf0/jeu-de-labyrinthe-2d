@@ -33,6 +33,7 @@ void dessiner_chemin(SDL_Renderer* rendu, int* chemin, int nb_etapes, int colonn
 void dessiner_personnage(SDL_Renderer* rendu, SDL_Texture* perso_texture, float x_pixel, float y_pixel);
 void dessiner_marqueurs(SDL_Renderer* rendu, int depart, int destination, int colonnes);
 void dessiner_heatmap_passage(SDL_Renderer* rendu, int* passages, int lignes, int colonnes, int max_passages); 
+void dessiner_rayon_detection(SDL_Renderer* rendu, int centre_pos, int rayon, int lignes, int colonnes);
 
 //================== Affichage SDL avec solution =================
 void afficher_labyrinthe_resolu_sdl(int *murs, int lignes, int colonnes, int depart, int destination);
