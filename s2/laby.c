@@ -125,7 +125,7 @@ void indice_vers_coord(int indice, int colonnes, int* x, int* y) {
 
 
 
-int** creer_matrice_adjacence(int* murs, int lignes, int colonnes) {
+int** creer_matrice_adjacence_cout_altr(int* murs, int lignes, int colonnes) {
     int nb_cellules = lignes * colonnes;
     int** matrice = malloc(sizeof(int*) * nb_cellules);
     if (!matrice) return NULL;
@@ -166,6 +166,97 @@ int** creer_matrice_adjacence(int* murs, int lignes, int colonnes) {
             int cout_arete = (rand() % MAX_COUT) + 1;
             matrice[u][v] = cout_arete;
             matrice[v][u] = cout_arete;
+        }
+    }
+    return matrice;
+}
+
+
+int** creer_matrice_adjacence_connue(int* murs_connus, int lignes, int colonnes) {
+    int nb_cellules = lignes * colonnes;
+    int** matrice = malloc(sizeof(int*) * nb_cellules);
+    if (!matrice) return NULL;
+    for (int i = 0; i < nb_cellules; i++) {
+        matrice[i] = calloc(nb_cellules, sizeof(int));
+        if (!matrice[i]) { /* ... gestion erreur ... */ return NULL; }
+    }
+
+    // Remplir la matrice
+    for (int u = 0; u < nb_cellules; u++) {
+        int x, y;
+        indice_vers_coord(u, colonnes, &x, &y);
+        int v;
+
+        // Si le mur HAUT n'est pas connu, le passage est considéré comme ouvert avec un coût de 1
+        if (y > 0 && !(murs_connus[u] & 1)) {
+            v = (y - 1) * colonnes + x;
+            matrice[u][v] = 1;
+            matrice[v][u] = 1;
+        }
+        // Si le mur DROIT n'est pas connu...
+        if (x < colonnes - 1 && !(murs_connus[u] & 2)) {
+            v = y * colonnes + (x + 1);
+            matrice[u][v] = 1;
+            matrice[v][u] = 1;
+        }
+        // etc. pour les autres directions
+        if (y < lignes - 1 && !(murs_connus[u] & 4)) {
+            v = (y + 1) * colonnes + x;
+            matrice[u][v] = 1;
+            matrice[v][u] = 1;
+        }
+        if (x > 0 && !(murs_connus[u] & 8)) {
+            v = y * colonnes + (x - 1);
+            matrice[u][v] = 1;
+            matrice[v][u] = 1;
+        }
+    }
+    return matrice;
+}
+
+
+
+int** creer_matrice_couts_connus(int* murs_connus, int* passages_counts, int lignes, int colonnes) {
+    int nb_cellules = lignes * colonnes;
+    int** matrice = malloc(sizeof(int*) * nb_cellules);
+    if (!matrice) return NULL;
+    for (int i = 0; i < nb_cellules; i++) {
+        matrice[i] = calloc(nb_cellules, sizeof(int));
+        if (!matrice[i]) { /* ... gestion erreur ... */ return NULL; }
+    }
+
+    for (int u = 0; u < nb_cellules; u++) {
+        int x, y;
+        indice_vers_coord(u, colonnes, &x, &y);
+        int v;
+
+        // Voisin du haut
+        if (y > 0 && !(murs_connus[u] & 1)) {
+            v = (y - 1) * colonnes + x;
+            int cout = 1 + passages_counts[v]; // Coût pour entrer dans la cellule v
+            matrice[u][v] = cout;
+            matrice[v][u] = 1 + passages_counts[u]; // Coût pour revenir en u
+        }
+        // Voisin de droite
+        if (x < colonnes - 1 && !(murs_connus[u] & 2)) {
+            v = y * colonnes + (x + 1);
+            int cout = 1 + passages_counts[v];
+            matrice[u][v] = cout;
+            matrice[v][u] = 1 + passages_counts[u];
+        }
+        // Voisin du bas
+        if (y < lignes - 1 && !(murs_connus[u] & 4)) {
+            v = (y + 1) * colonnes + x;
+            int cout = 1 + passages_counts[v];
+            matrice[u][v] = cout;
+            matrice[v][u] = 1 + passages_counts[u];
+        }
+        // Voisin de gauche
+        if (x > 0 && !(murs_connus[u] & 8)) {
+            v = y * colonnes + (x - 1);
+            int cout = 1 + passages_counts[v];
+            matrice[u][v] = cout;
+            matrice[v][u] = 1 + passages_counts[u];
         }
     }
     return matrice;
@@ -240,6 +331,8 @@ void ajouter_mur(int *murs, int colonnes, int u, int v) {
         murs[v] |= 4;
     }
 }
+
+
 
 
 
