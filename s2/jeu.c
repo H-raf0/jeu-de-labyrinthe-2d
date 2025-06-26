@@ -11,13 +11,16 @@
 #define AI_MODE_SEARCH_ZONE 0 // Le monstre explore une zone
 #define AI_MODE_HUNT 1        // Le monstre voit le joueur et le chasse
 
-#define NOMBRE_MONSTRES 2
+#define NOMBRE_MONSTRES 3
 #define SEUIL_DETECTION_HUNT 6      // Portée de la vue directe
-#define DUREE_PISTE 100             // La piste reste "chaude" pendant . frames
-#define SEUIL_LAISSE 15 // Si le joueur est plus loin que 15 cases, le monstre se rapproche
-#define RAPP_CLDWN 50
-#define MEMOIRE_MAX 9999
-#define VITESSE_MONSTRE 10
+#define DUREE_PISTE 500             // La piste reste "chaude" pendant . frames
+#define RAPP_CLDWN 100
+#define MEMOIRE_MAX 99999
+#define VITESSE_MONSTRE 20
+
+
+#define MONSTRE_PENALITE_RAYON 4 // How far the penalty spreads from a monster.
+#define MONSTRE_PENALITE_COUT 20 // The base cost added to a cell near another monster.
 
 
 #define SAUT_COOLDOWN 0
@@ -26,13 +29,6 @@
 
 #define HEIGHT 20
 #define WIDTH 20
-
-#ifndef max
-#define max(a,b) ((a) > (b) ? (a) : (b))
-#endif
-#ifndef min
-#define min(a,b) ((a) < (b) ? (a) : (b))
-#endif
 
 
 typedef struct {
@@ -101,12 +97,12 @@ void apprendre_mur(Monstre* monstre, int u, int v, int colonnes) {
 
 
 // GIDC: Graphe Inconnu, Destination Connue
-int gidc(Monstre* monstre, int* murs_reels, int lignes, int colonnes, int destination) {
+int gidc(Monstre* monstre, int* murs_reels, int lignes, int colonnes, int destination, const int* penalite_map) {
     int nb_cellules = lignes * colonnes;
     int depart = monstre->pos;
 
     // Planifier le chemin sur la carte connue
-    int** graphe_connu = creer_matrice_adjacence_connue(monstre->murs_connus, lignes, colonnes);
+    int** graphe_connu = creer_matrice_couts_dynamiques(monstre->murs_connus, penalite_map, lignes, colonnes);
     if (!graphe_connu) { return depart; } 
 
     noeud plan;
@@ -160,8 +156,8 @@ int gidc(Monstre* monstre, int* murs_reels, int lignes, int colonnes, int destin
 }
 
 
-// GIDC: Graphe Inconnu, Destination Connue
-int gidi(Monstre* monstre, int* murs_reels, int lignes, int colonnes) {
+
+int gidi(Monstre* monstre, int* murs_reels, int lignes, int colonnes, const int* penalite_map) {
     int nb_cellules = lignes * colonnes;
 
     // --- 1. Observer les environs et mettre à jour la frontière ---
@@ -206,7 +202,7 @@ int gidi(Monstre* monstre, int* murs_reels, int lignes, int colonnes) {
     //BFS_laby(monstre->murs_connus, lignes, colonnes, monstre->pos, &plan_vers_frontiere);
 
     // On crée une matrice d'adjacence à partir de la connaissance du monstre
-    int** graphe_connu_1 = creer_matrice_adjacence_connue(monstre->murs_connus, lignes, colonnes);
+    int** graphe_connu_1 = creer_matrice_couts_dynamiques(monstre->murs_connus, penalite_map, lignes, colonnes);
     if (!graphe_connu_1) { return monstre->pos; } // Sécurité
     // On lance Dijkstra depuis la position actuelle
     Dijkstra_laby(graphe_connu_1, nb_cellules, monstre->pos, &plan_vers_frontiere);
@@ -229,7 +225,7 @@ int gidi(Monstre* monstre, int* murs_reels, int lignes, int colonnes) {
     noeud plan_vers_cible;
 
     // On recrée une matrice d'adjacence (nécessaire car la première a été libérée)
-    int** graphe_connu_2 = creer_matrice_adjacence_connue(monstre->murs_connus, lignes, colonnes);
+    int** graphe_connu_2 = creer_matrice_couts_dynamiques(monstre->murs_connus, penalite_map, lignes, colonnes);
     if (!graphe_connu_2) { return monstre->pos; } // Sécurité
     // On lance Dijkstra depuis la cible pour trouver le chemin retour
     Dijkstra_laby(graphe_connu_2, nb_cellules, target_node, &plan_vers_cible);
@@ -260,7 +256,10 @@ int gidi(Monstre* monstre, int* murs_reels, int lignes, int colonnes) {
 }
 
 
-void mettre_a_jour_monstre(Monstre* monstre, int joueur_pos, int* murs_reels, int lignes, int colonnes) {
+void mettre_a_jour_monstre(Monstre* monstres, int monstre_index, int joueur_pos, int* murs_reels, int lignes, int colonnes) {
+    Monstre* monstre = &monstres[monstre_index];
+    int nb_cellules = lignes * colonnes;
+    
     // --- PERCEPTION & DÉCISION DU MODE ---
     int j_x, j_y, m_x, m_y;
     indice_vers_coord(joueur_pos, colonnes, &j_x, &j_y);
@@ -303,13 +302,39 @@ void mettre_a_jour_monstre(Monstre* monstre, int joueur_pos, int* murs_reels, in
     }
     monstre->move_cooldown = VITESSE_MONSTRE;
 
+
+    int* penalite_map = calloc(nb_cellules, sizeof(int));
+    if (!penalite_map) return; // Sécurité
+
+    for (int i = 0; i < NOMBRE_MONSTRES; i++) {
+        if (i == monstre_index) continue; // Ne pas se pénaliser soi-même
+
+        int autre_monstre_pos = monstres[i].pos;
+        int am_x, am_y;
+        indice_vers_coord(autre_monstre_pos, colonnes, &am_x, &am_y);
+
+        // Appliquer une pénalité dans un rayon autour de l'autre monstre
+        for (int y_p = am_y - MONSTRE_PENALITE_RAYON; y_p <= am_y + MONSTRE_PENALITE_RAYON; y_p++) {
+            for (int x_p = am_x - MONSTRE_PENALITE_RAYON; x_p <= am_x + MONSTRE_PENALITE_RAYON; x_p++) {
+                if (x_p >= 0 && x_p < colonnes && y_p >= 0 && y_p < lignes) {
+                    int dist = abs(x_p - am_x) + abs(y_p - am_y);
+                    if (dist <= MONSTRE_PENALITE_RAYON) {
+                        int penalite = MONSTRE_PENALITE_COUT * (MONSTRE_PENALITE_RAYON - dist) / MONSTRE_PENALITE_RAYON;
+                        int cell_idx = y_p * colonnes + x_p;
+                        penalite_map[cell_idx] += penalite; // On ajoute, au cas où plusieurs monstres sont proches
+                    }
+                }
+            }
+        }
+    }
+
     // --- PLANIFICATION ET MISE À JOUR DE la `prochaine_position` ---
     int prochaine_position_planifiee = monstre->pos;
     
     switch (monstre->mode) {
         case AI_MODE_HUNT:
             // GIDC: Calcule le prochain pas optimal vers le joueur
-            prochaine_position_planifiee = gidc(monstre, murs_reels, lignes, colonnes, joueur_pos);
+            prochaine_position_planifiee = gidc(monstre, murs_reels, lignes, colonnes, joueur_pos, penalite_map);
             monstre->rapp_cooldown = 0;
             break;
         case AI_MODE_SEARCH_ZONE:
@@ -318,7 +343,7 @@ void mettre_a_jour_monstre(Monstre* monstre, int joueur_pos, int* murs_reels, in
             // 2. Phase de déplacement ou d'exploration
             if (monstre->pos != monstre->drnier_pos_jr_connu && monstre->rapp_cooldown == 0) {
                 // Si on n'est pas encore à notre point de patrouille, on s'y dirige.
-                prochaine_position_planifiee = gidc(monstre, murs_reels, lignes, colonnes, monstre->drnier_pos_jr_connu);
+                prochaine_position_planifiee = gidc(monstre, murs_reels, lignes, colonnes, monstre->drnier_pos_jr_connu, penalite_map);
                 
                 /*
                 // Si on est bloqué en route, on explore pour trouver une issue
@@ -333,7 +358,7 @@ void mettre_a_jour_monstre(Monstre* monstre, int joueur_pos, int* murs_reels, in
             } else {
                 // On est arrivé à notre point de patrouille, on explore localement avec GIDI.
                 //printf("Monstre %d : Cible de patrouille atteinte, exploration locale (GIDI).\n", monstre->pos);
-                prochaine_position_planifiee = gidi(monstre, murs_reels, lignes, colonnes);
+                prochaine_position_planifiee = gidi(monstre, murs_reels, lignes, colonnes, penalite_map);
                 if (monstre->rapp_cooldown >= 1){
                     printf("\ncooldown :%d\n", monstre->rapp_cooldown);
                     monstre->rapp_cooldown--;
@@ -352,6 +377,9 @@ void mettre_a_jour_monstre(Monstre* monstre, int joueur_pos, int* murs_reels, in
             }*/
             break;
     }
+
+    // Libérer la mémoire de la carte de pénalités
+    free(penalite_map);
 
     // --- EXÉCUTION DU MOUVEMENT ---  
     monstre->pos = prochaine_position_planifiee;
@@ -529,7 +557,7 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
         }
 
         for (int i = 0; i < NOMBRE_MONSTRES; i++) {
-            mettre_a_jour_monstre(&monstres[i], joueur.pos, murs_reels, lignes, colonnes);
+            mettre_a_jour_monstre(monstres, i, joueur.pos, murs_reels, lignes, colonnes);
             if (monstres[i].pos == joueur.pos) { printf("GAME OVER !\n"); quitter = true; }
         }
 
@@ -605,3 +633,5 @@ int main() {
     printf("Programme terminé.\n");
     return 0;
 }
+
+//je l'aime pas, pourquoi pas faire comme bfs avec une liste des murs, mais on augmente 15 pour augmentez le poids, par eexemple one 15 represente les 4 premier bits 1111, on a peut ajoutez

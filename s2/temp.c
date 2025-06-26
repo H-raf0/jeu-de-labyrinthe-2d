@@ -1,134 +1,102 @@
-// dans jeu.c
-
-// Fonction de jeu principale
-void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
+void mettre_a_jour_monstre(Monstre* monstres, int monstre_index, int joueur_pos, int* murs_reels, int lignes, int colonnes) {
+    Monstre* monstre = &monstres[monstre_index];
     int nb_cellules = lignes * colonnes;
-    SDL_Init(SDL_INIT_VIDEO);
-    SDL_Window* fenetre = SDL_CreateWindow("Jeu IA Focalisée", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, colonnes * TAILLE_CELLULE, lignes * TAILLE_CELLULE, SDL_WINDOW_SHOWN);
-    SDL_Renderer* rendu = SDL_CreateRenderer(fenetre, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    SDL_Texture* perso_texture = IMG_LoadTexture(rendu, "personnage.png");
-    SDL_Texture* monstre_texture = IMG_LoadTexture(rendu, "monstre.png");
 
-    // Initialisation du Joueur
-    Joueur joueur;
-    joueur.pos = 0;
-    joueur.direction = 4; // Commence en regardant vers le bas
-    joueur.saut_cooldown = 0;
-
-    // Initialisation des Monstres
-    Monstre monstres[NOMBRE_MONSTRES];
-    for (int i = 0; i < NOMBRE_MONSTRES; i++) {
-        Monstre* m = &monstres[i];
-        m->pos = nb_cellules - 1 - i * 2;
-        m->mode = AI_MODE_SEARCH_ZONE;
-        m->timer_piste = 0;
-        m->murs_connus = calloc(nb_cellules, sizeof(int));
-        m->memoire_murs = malloc(sizeof(arete) * MEMOIRE_MAX);
-        m->memoire_tete = 0; m->memoire_queue = 0; m->memoire_taille_actuelle = 0;
-        m->noeuds_visites_zone = calloc(nb_cellules, sizeof(bool));
-        m->frontier_nodes = malloc(sizeof(int) * nb_cellules);
-        m->frontier_size = 0;
-        m->prochaine_position = m->pos;
-        m->drnier_pos_jr_connu = joueur.pos; 
-        m->rapp_cooldown = RAPP_CLDWN;
-        m->move_cooldown = 1;
+    // --- PERCEPTION & DÉCISION DU MODE (INCHANGÉ) ---
+    int j_x, j_y, m_x, m_y;
+    indice_vers_coord(joueur_pos, colonnes, &j_x, &j_y);
+    indice_vers_coord(monstre->pos, colonnes, &m_x, &m_y);
+    int distance = abs(j_x - m_x) + abs(j_y - m_y);
+    if (monstre->timer_piste > 0) monstre->timer_piste--;
+    int old_mode = monstre->mode;
+    if (distance <= SEUIL_DETECTION_HUNT) {
+        monstre->mode = AI_MODE_HUNT;
+        if (old_mode != AI_MODE_HUNT) printf("Monstre %d -> MODE CHASSE (Détection directe)\n", monstre->pos);
+        monstre->drnier_pos_jr_connu = joueur_pos;
+        monstre->timer_piste = DUREE_PISTE;
+    } 
+    else if (monstre->timer_piste > 0) {
+        monstre->mode = AI_MODE_HUNT;
+        if (old_mode != AI_MODE_HUNT) printf("Monstre %d -> MODE CHASSE (Poursuite de la piste)\n", monstre->pos);
+    } 
+    else {
+        monstre->mode = AI_MODE_SEARCH_ZONE;
+        if (old_mode != AI_MODE_SEARCH_ZONE){
+            printf("Monstre %d -> MODE RECHERCHE (Piste perdue)\n", monstre->pos);
+            monstre->drnier_pos_jr_connu = monstre->pos; 
+            monstre->frontier_size = 0;
+            memset(monstre->noeuds_visites_zone, 0, sizeof(bool) * (lignes*colonnes));
+            monstre->frontier_nodes[monstre->frontier_size++] = monstre->pos;
+        }
     }
 
-    bool quitter = false;
-    SDL_Event e;
-    while (!quitter) {
-        // Décrémenter le cooldown du saut du joueur à chaque frame
-        if (joueur.saut_cooldown > 0) {
-            joueur.saut_cooldown--;
-        }
+    if (monstre->move_cooldown > 0) {
+        monstre->move_cooldown--;
+        return;
+    }
+    monstre->move_cooldown = VITESSE_MONSTRE;
 
-        while (SDL_PollEvent(&e)) {
-            if (e.type == SDL_QUIT) {
-                quitter = true;
-            }
-            if (e.type == SDL_KEYDOWN) {
-                int nouvelle_pos = joueur.pos;
-                int direction_flag = 0;
+    // --- NOUVEAU: CRÉATION DE LA CARTE DE PÉNALITÉS ---
+    int* penalite_map = calloc(nb_cellules, sizeof(int));
+    if (!penalite_map) return; // Sécurité
 
-                switch (e.key.keysym.sym) {
-                    // Mouvement normal
-                    case SDLK_UP:    direction_flag = 1; nouvelle_pos -= colonnes; break;
-                    case SDLK_DOWN:  direction_flag = 4; nouvelle_pos += colonnes; break;
-                    case SDLK_LEFT:  direction_flag = 8; nouvelle_pos -= 1;        break;
-                    case SDLK_RIGHT: direction_flag = 2; nouvelle_pos += 1;        break;
+    for (int i = 0; i < NOMBRE_MONSTRES; i++) {
+        if (i == monstre_index) continue; // Ne pas se pénaliser soi-même
 
-                    // --- NOUVELLE LOGIQUE DE SAUT ---
-                    case TOUCHE_SAUT:
-                        // On ne peut sauter que si le cooldown est terminé
-                        if (joueur.saut_cooldown == 0) {
-                            int pos_apres_saut = -1;
-                            // On vérifie s'il y a bien un mur dans la direction où le joueur regarde
-                            if (murs_reels[joueur.pos] & joueur.direction) {
-                                // Calculer la position de l'autre côté du mur
-                                if (joueur.direction == 1) pos_apres_saut = joueur.pos - colonnes; // HAUT
-                                else if (joueur.direction == 4) pos_apres_saut = joueur.pos + colonnes; // BAS
-                                else if (joueur.direction == 8) pos_apres_saut = joueur.pos - 1;       // GAUCHE
-                                else if (joueur.direction == 2) pos_apres_saut = joueur.pos + 1;       // DROITE
-                                
-                                // Vérifier que la case d'atterrissage est valide (dans le labyrinthe)
-                                int x, y;
-                                indice_vers_coord(pos_apres_saut, colonnes, &x, &y);
-                                if (x >= 0 && x < colonnes && y >= 0 && y < lignes) {
-                                    printf("Le joueur a sauté par-dessus un mur !\n");
-                                    joueur.pos = pos_apres_saut;
-                                    joueur.saut_cooldown = SAUT_COOLDOWN; // Activer le cooldown
-                                }
-                            }
-                        }
-                        // On met le flag à 0 pour ne pas entrer dans la logique de marche normale
-                        direction_flag = 0;
-                        break;
-                }
+        int autre_monstre_pos = monstres[i].pos;
+        int am_x, am_y;
+        indice_vers_coord(autre_monstre_pos, colonnes, &am_x, &am_y);
 
-                // Si une touche de direction a été pressée
-                if (direction_flag != 0) {
-                    // On met à jour la direction dans laquelle le joueur regarde
-                    joueur.direction = direction_flag;
-                    // On vérifie si le mouvement est valide (pas de mur)
-                    if (!(murs_reels[joueur.pos] & direction_flag)) {
-                        joueur.pos = nouvelle_pos;
+        // Appliquer une pénalité dans un rayon autour de l'autre monstre
+        for (int y_p = am_y - MONSTRE_PENALITE_RAYON; y_p <= am_y + MONSTRE_PENALITE_RAYON; y_p++) {
+            for (int x_p = am_x - MONSTRE_PENALITE_RAYON; x_p <= am_x + MONSTRE_PENALITE_RAYON; x_p++) {
+                if (x_p >= 0 && x_p < colonnes && y_p >= 0 && y_p < lignes) {
+                    int dist = abs(x_p - am_x) + abs(y_p - am_y);
+                    if (dist <= MONSTRE_PENALITE_RAYON) {
+                        int penalite = MONSTRE_PENALITE_COUT * (MONSTRE_PENALITE_RAYON - dist) / MONSTRE_PENALITE_RAYON;
+                        int cell_idx = y_p * colonnes + x_p;
+                        penalite_map[cell_idx] += penalite; // On ajoute, au cas où plusieurs monstres sont proches
                     }
                 }
             }
         }
-
-        // Mise à jour des monstres
-        for (int i = 0; i < NOMBRE_MONSTRES; i++) {
-            mettre_a_jour_monstre(&monstres[i], joueur.pos, murs_reels, lignes, colonnes);
-            if (monstres[i].pos == joueur.pos) { printf("GAME OVER !\n"); quitter = true; }
-        }
-
-        // --- DESSIN ---
-        SDL_SetRenderDrawColor(rendu, 20, 0, 30, 255);
-        SDL_RenderClear(rendu);
-        SDL_SetRenderDrawColor(rendu, 100, 80, 200, 255);
-        for (int i = 0; i < nb_cellules; i++) dessiner_murs(rendu, i % colonnes, i / colonnes, murs_reels, colonnes);
-        
-        dessiner_personnage(rendu, perso_texture, (joueur.pos % colonnes + 0.5f) * TAILLE_CELLULE, (joueur.pos / colonnes + 0.5f) * TAILLE_CELLULE);
-        
-        for (int i = 0; i < NOMBRE_MONSTRES; i++) {
-            if(monstres[i].mode == AI_MODE_HUNT) SDL_SetTextureColorMod(monstre_texture, 255, 100, 100);
-            else SDL_SetTextureColorMod(monstre_texture, 255, 255, 100);
-            dessiner_personnage(rendu, monstre_texture, (monstres[i].pos % colonnes + 0.5f) * TAILLE_CELLULE, (monstres[i].pos / colonnes + 0.5f) * TAILLE_CELLULE);
-        }
-        SDL_RenderPresent(rendu);
     }
 
-    // Libération de la mémoire
-    for (int i = 0; i < NOMBRE_MONSTRES; i++) {
-        free(monstres[i].murs_connus);
-        free(monstres[i].memoire_murs);
-        free(monstres[i].noeuds_visites_zone);
-        free(monstres[i].frontier_nodes);
+    int prochaine_position_planifiee = monstre->pos;
+    
+    switch (monstre->mode) {
+        case AI_MODE_HUNT:
+            // MODIFIÉ: On passe la penalite_map à gidc
+            prochaine_position_planifiee = gidc(monstre, murs_reels, lignes, colonnes, joueur_pos, penalite_map);
+            monstre->rapp_cooldown = 0;
+            break;
+        case AI_MODE_SEARCH_ZONE:
+            if (monstre->pos != monstre->drnier_pos_jr_connu && monstre->rapp_cooldown == 0) {
+                 // MODIFIÉ: On passe la penalite_map à gidc
+                prochaine_position_planifiee = gidc(monstre, murs_reels, lignes, colonnes, monstre->drnier_pos_jr_connu, penalite_map);
+                if (prochaine_position_planifiee == monstre->drnier_pos_jr_connu) {
+                    monstre->rapp_cooldown = RAPP_CLDWN;
+                }
+            } else {
+                // MODIFIÉ: On passe la penalite_map à gidi
+                prochaine_position_planifiee = gidi(monstre, murs_reels, lignes, colonnes, penalite_map);
+                if (monstre->rapp_cooldown >= 1){
+                    printf("\ncooldown :%d\n", monstre->rapp_cooldown);
+                    monstre->rapp_cooldown--;
+                }
+                if (monstre->rapp_cooldown == 1){
+                    monstre->drnier_pos_jr_connu = joueur_pos;
+                }
+            }
+            break;
     }
-    SDL_DestroyTexture(perso_texture);
-    SDL_DestroyTexture(monstre_texture);
-    SDL_DestroyRenderer(rendu);
-    SDL_DestroyWindow(fenetre); 
-    SDL_Quit();
+    
+    // NOUVEAU: Libérer la mémoire de la carte de pénalités
+    free(penalite_map);
+
+    monstre->pos = prochaine_position_planifiee;
 }
+
+    
+
+IGNORE_WHEN_COPYING_START
