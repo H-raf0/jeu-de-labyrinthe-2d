@@ -4,8 +4,7 @@
 #include <string.h>
 #include <stdbool.h>
 
-#include "laby.h"
-#include "labySDL.h"
+#include "jeu.h"
 
 // --- Définitions pour le mode de jeu à 2 ÉTATS ---
 #define AI_MODE_SEARCH_ZONE 0 // Le monstre explore une zone
@@ -389,24 +388,9 @@ void mettre_a_jour_monstre(Monstre* monstres, int monstre_index, int joueur_pos,
 
 
 // Fonction de jeu principale
-void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
+void lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colonnes) {
     int nb_cellules = lignes * colonnes;
 
-    // --- Initialisation SDL ---
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS) < 0) {
-        printf("SDL initialization failed: %s\n", SDL_GetError());
-        return 1;
-    }
-    if (!(IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG)) {
-        printf("SDL_image initialization failed: %s\n", IMG_GetError());
-        SDL_Quit();
-        return 1;
-    }
-    if (!init_audio_system()) {
-        IMG_Quit();
-        SDL_Quit();
-        return 1;
-    }
 
     // Obtenir les dimensions de l'écran
     SDL_DisplayMode dm;
@@ -419,20 +403,6 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
     // Remplir les dimensions de la fenêtre dans notre config
     g_config.window_w = dm.w;
     g_config.window_h = dm.h;
-
-    // 2. Créer une fenêtre en plein écran
-    SDL_Window* fenetre = SDL_CreateWindow("Le Jeu", 
-                                           SDL_WINDOWPOS_CENTERED, 
-                                           SDL_WINDOWPOS_CENTERED, 
-                                           g_config.window_w + 1, 
-                                           g_config.window_h, 
-                                           SDL_WINDOW_FULLSCREEN_DESKTOP);
-    if (!fenetre) {
-        printf("erreur lors de la creation du fenêtre\n");
-        return;
-    }
-    
-    SDL_Renderer* rendu = SDL_CreateRenderer(fenetre, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     
     
     // Calculer les dimensions proportionnelles
@@ -535,6 +505,7 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
                     case SDLK_DOWN:  nouvelle_pos += colonnes; direction_flag = 4; break;
                     case SDLK_LEFT:  nouvelle_pos -= 1;        direction_flag = 8; break;
                     case SDLK_RIGHT: nouvelle_pos += 1;        direction_flag = 2; break;
+                    case SDLK_ESCAPE: quitter = true; continue;
                     case SDLK_SPACE: 
                         // On ne peut sauter que si le cooldown est terminé
                         if (joueur.saut_cooldown == 0) {
@@ -652,10 +623,13 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
     SDL_DestroyTexture(perso_texture);
     SDL_DestroyTexture(monstre_texture);
     SDL_DestroyTexture(piece_texture); 
-    SDL_DestroyRenderer(rendu);
-    SDL_DestroyWindow(fenetre); SDL_Quit();
+    //SDL_DestroyRenderer(rendu);
+    //SDL_DestroyWindow(fenetre);
+    //SDL_Quit();
 }
 
+
+/*
 int main() {
     unsigned int seed = time(NULL);
     srand(seed);
@@ -681,3 +655,4 @@ int main() {
     printf("Programme terminé.\n");
     return 0;
 }
+*/

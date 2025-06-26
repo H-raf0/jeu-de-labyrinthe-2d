@@ -67,7 +67,7 @@ void draw_difficulty_control(SDL_Renderer* renderer, SDL_Rect* rect, DifficultyL
 
 // --- Fonctions publiques (déclarées dans le .h) ---
 
-void init_parallax(SDL_Renderer* renderer, ParallaxBackground* bg) {
+void init_parallax(SDL_Renderer* renderer, ParallaxBackground* bg, int window_w) {
     for (int i = 0; i < NUM_LAYERS; i++) {
         char filename[32];
         snprintf(filename, sizeof(filename), "bgg%d.png", i);
@@ -77,23 +77,26 @@ void init_parallax(SDL_Renderer* renderer, ParallaxBackground* bg) {
         }
         bg->speeds[i] = 0.5f + (float)i * 0.75f;
         bg->x_pos[i][0] = 0.0f;
-        bg->x_pos[i][1] = (float)SCREEN_WIDTH;
+        // Utilise window_w au lieu de SCREEN_WIDTH
+        bg->x_pos[i][1] = (float)window_w; 
     }
 }
 
-void draw_parallax(SDL_Renderer* renderer, ParallaxBackground* bg) {
+void draw_parallax(SDL_Renderer* renderer, ParallaxBackground* bg, int window_w, int window_h) {
     for (int i = 0; i < NUM_LAYERS; i++) {
         if (bg->layers[i]) {
             bg->x_pos[i][0] -= bg->speeds[i];
             bg->x_pos[i][1] -= bg->speeds[i];
             
-            if (bg->x_pos[i][0] <= -SCREEN_WIDTH) bg->x_pos[i][0] = bg->x_pos[i][1] + SCREEN_WIDTH;
-            if (bg->x_pos[i][1] <= -SCREEN_WIDTH) bg->x_pos[i][1] = bg->x_pos[i][0] + SCREEN_WIDTH;
+            // Utilise window_w
+            if (bg->x_pos[i][0] <= -window_w) bg->x_pos[i][0] = bg->x_pos[i][1] + window_w;
+            if (bg->x_pos[i][1] <= -window_w) bg->x_pos[i][1] = bg->x_pos[i][0] + window_w;
             
-            SDL_Rect dst1 = {(int)bg->x_pos[i][0], 0, SCREEN_WIDTH, SCREEN_HEIGHT};
+            // Utilise window_w et window_h pour étirer l'image sur tout l'écran
+            SDL_Rect dst1 = {(int)bg->x_pos[i][0], 0, window_w, window_h};
             SDL_RenderCopy(renderer, bg->layers[i], NULL, &dst1);
             
-            SDL_Rect dst2 = {(int)bg->x_pos[i][1], 0, SCREEN_WIDTH, SCREEN_HEIGHT};
+            SDL_Rect dst2 = {(int)bg->x_pos[i][1], 0, window_w, window_h};
             SDL_RenderCopy(renderer, bg->layers[i], NULL, &dst2);
         }
     }
