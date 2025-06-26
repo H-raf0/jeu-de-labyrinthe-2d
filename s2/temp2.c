@@ -1,21 +1,19 @@
-      
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
-#include <math.h> // Ajout pour la fonction fabs()
 #include "laby.h"
 #include "labySDL.h"
 
-#define CURRENT_ALGO 2
+#define CURRENT_ALGO 0
 // 0 BFS, 1 DIJSKTRA, 2 A*
-#define VITESSE 0.5f // Vitesse d'interpolation ajustée pour plus de fluidité
+#define VITESSE 0.5f
 
 #define CURRENT_HEURISTIC HEURISTIC_MANHATTAN // HEURISTIC_MANHATTAN ou HEURISTIC_EUCLIDEAN ou HEURISTIC_TCHEBYCHEV
 
-#define DELAI_PAS 10
+#define DELAI_PAS 50
 
-#define DELAI_PAS_EXPLORATION 10
+#define DELAI_PAS_EXPLORATION 50
 
 
 
@@ -38,25 +36,8 @@ void lancer_animation_labyrinthe(int* murs, int lignes, int colonnes) {
 
     // --- Initialisation SDL ---
     SDL_Init(SDL_INIT_VIDEO);
-    
-    // --- Configuration de Rendu Locale ---
-    RenderConfig local_config;
-    SDL_DisplayMode dm;
-    SDL_GetDesktopDisplayMode(0, &dm);
-    local_config.window_w = dm.w;
-    local_config.window_h = dm.h;
-
-    SDL_Window* fenetre = SDL_CreateWindow("Labyrinthe Animé", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, local_config.window_w, local_config.window_h, SDL_WINDOW_FULLSCREEN_DESKTOP);
+    SDL_Window* fenetre = SDL_CreateWindow("Labyrinthe Animé", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, colonnes * TAILLE_CELLULE, lignes * TAILLE_CELLULE, SDL_WINDOW_SHOWN);
     SDL_Renderer* rendu = SDL_CreateRenderer(fenetre, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-
-    int cell_w = local_config.window_w / colonnes;
-    int cell_h = local_config.window_h / lignes;
-    local_config.cell_size = (cell_w < cell_h) ? cell_w : cell_h;
-    local_config.wall_thickness = (local_config.cell_size / 16.0f > 1) ? (int)(local_config.cell_size / 16.0f) : 1;
-    local_config.offset_x = (local_config.window_w - (colonnes * local_config.cell_size)) / 2;
-    local_config.offset_y = (local_config.window_h - (lignes * local_config.cell_size)) / 2;
-    g_config = local_config; // Assigner à la config globale
-
     SDL_Texture* perso_texture = IMG_LoadTexture(rendu, "personnage.png");
     if (!perso_texture) { fprintf(stderr, "Erreur chargement personnage.png: %s\n", IMG_GetError()); return; }
 
@@ -94,9 +75,8 @@ void lancer_animation_labyrinthe(int* murs, int lignes, int colonnes) {
         nb_etapes = reconstruire_chemin(&n, depart, destination, chemin);
     }
     etape_actuelle = 0;
-    // Initialiser la position en pixels avec la config
-    perso_x = g_config.offset_x + (depart % colonnes) * g_config.cell_size + g_config.cell_size / 2.0f;
-    perso_y = g_config.offset_y + (depart / colonnes) * g_config.cell_size + g_config.cell_size / 2.0f;
+    perso_x = (depart % colonnes) * TAILLE_CELLULE + TAILLE_CELLULE / 2.0f;
+    perso_y = (depart / colonnes) * TAILLE_CELLULE + TAILLE_CELLULE / 2.0f;
     
     // --- Boucle Principale de l'Application ---
     int quitter = 0;
@@ -104,15 +84,13 @@ void lancer_animation_labyrinthe(int* murs, int lignes, int colonnes) {
     while (!quitter) {
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) quitter = 1;
-            if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE) quitter = 1;
         }
 
         // --- Logique de mise à jour ---
         if (etape_actuelle < nb_etapes - 1) {
             int cell_suivante = chemin[etape_actuelle + 1];
-            // Calculer la position cible en pixels avec la config
-            float target_x = g_config.offset_x + (cell_suivante % colonnes) * g_config.cell_size + g_config.cell_size / 2.0f;
-            float target_y = g_config.offset_y + (cell_suivante / colonnes) * g_config.cell_size + g_config.cell_size / 2.0f;
+            float target_x = (cell_suivante % colonnes) * TAILLE_CELLULE + TAILLE_CELLULE / 2.0f;
+            float target_y = (cell_suivante / colonnes) * TAILLE_CELLULE + TAILLE_CELLULE / 2.0f;
 
             float vitesse = VITESSE;
             perso_x += (target_x - perso_x) * vitesse;
@@ -183,25 +161,8 @@ void demarrer_exploration_dynamique(int* murs_reels, int lignes, int colonnes) {
     if (!murs_connus) { return; }
 
     SDL_Init(SDL_INIT_VIDEO);
-    
-    // --- Configuration de Rendu Locale ---
-    RenderConfig local_config;
-    SDL_DisplayMode dm;
-    SDL_GetDesktopDisplayMode(0, &dm);
-    local_config.window_w = dm.w;
-    local_config.window_h = dm.h;
-
-    SDL_Window* fenetre = SDL_CreateWindow("Exploration Dynamique (Dijkstra)", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, local_config.window_w, local_config.window_h, SDL_WINDOW_FULLSCREEN_DESKTOP);
+    SDL_Window* fenetre = SDL_CreateWindow("Exploration Dynamique (Dijkstra)", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, colonnes * TAILLE_CELLULE, lignes * TAILLE_CELLULE, SDL_WINDOW_SHOWN);
     SDL_Renderer* rendu = SDL_CreateRenderer(fenetre, -1, SDL_RENDERER_ACCELERATED);
-    
-    int cell_w = local_config.window_w / colonnes;
-    int cell_h = local_config.window_h / lignes;
-    local_config.cell_size = (cell_w < cell_h) ? cell_w : cell_h;
-    local_config.wall_thickness = (local_config.cell_size / 16.0f > 1) ? (int)(local_config.cell_size / 16.0f) : 1;
-    local_config.offset_x = (local_config.window_w - (colonnes * local_config.cell_size)) / 2;
-    local_config.offset_y = (local_config.window_h - (lignes * local_config.cell_size)) / 2;
-    g_config = local_config; // Assigner à la config globale
-
     SDL_Texture* perso_texture = IMG_LoadTexture(rendu, "personnage.png");
 
     int pos_actuelle = depart;
@@ -290,12 +251,7 @@ void demarrer_exploration_dynamique(int* murs_reels, int lignes, int colonnes) {
                 SDL_RenderClear(rendu);
                 for (int i = 0; i < nb_cellules; i++) dessiner_murs_connus(rendu, i % colonnes, i / colonnes, murs_connus, colonnes);
                 dessiner_marqueurs(rendu, depart, destination, colonnes);
-
-                // Calculer la position en pixels avec la config
-                float perso_px = g_config.offset_x + (pos_actuelle % colonnes + 0.5f) * g_config.cell_size;
-                float perso_py = g_config.offset_y + (pos_actuelle / colonnes + 0.5f) * g_config.cell_size;
-                dessiner_personnage(rendu, perso_texture, perso_px, perso_py);
-                
+                dessiner_personnage(rendu, perso_texture, (pos_actuelle % colonnes + 0.5f) * TAILLE_CELLULE, (pos_actuelle / colonnes + 0.5f) * TAILLE_CELLULE);
                 SDL_RenderPresent(rendu);
                 SDL_Delay(DELAI_PAS);
             }
@@ -339,25 +295,8 @@ void demarrer_exploration_inconnue(int* murs_reels, int lignes, int colonnes, in
 
     // --- Initialisation SDL ---
     SDL_Init(SDL_INIT_VIDEO);
-
-    // --- Configuration de Rendu Locale ---
-    RenderConfig local_config;
-    SDL_DisplayMode dm;
-    SDL_GetDesktopDisplayMode(0, &dm);
-    local_config.window_w = dm.w;
-    local_config.window_h = dm.h;
-
-    SDL_Window* fenetre = SDL_CreateWindow("Exploration Inconnue", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, local_config.window_w, local_config.window_h, SDL_WINDOW_FULLSCREEN_DESKTOP);
+    SDL_Window* fenetre = SDL_CreateWindow("Exploration", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, colonnes * TAILLE_CELLULE, lignes * TAILLE_CELLULE, SDL_WINDOW_SHOWN);
     SDL_Renderer* rendu = SDL_CreateRenderer(fenetre, -1, SDL_RENDERER_ACCELERATED);
-
-    int cell_w = local_config.window_w / colonnes;
-    int cell_h = local_config.window_h / lignes;
-    local_config.cell_size = (cell_w < cell_h) ? cell_w : cell_h;
-    local_config.wall_thickness = (local_config.cell_size / 16.0f > 1) ? (int)(local_config.cell_size / 16.0f) : 1;
-    local_config.offset_x = (local_config.window_w - (colonnes * local_config.cell_size)) / 2;
-    local_config.offset_y = (local_config.window_h - (lignes * local_config.cell_size)) / 2;
-    g_config = local_config; // Assigner à la config globale
-
     SDL_Texture* perso_texture = IMG_LoadTexture(rendu, "personnage.png");
 
     // --- Initialisation de l'algorithme (selon la spec) ---
@@ -427,21 +366,9 @@ void demarrer_exploration_inconnue(int* murs_reels, int lignes, int colonnes, in
                 dessiner_murs_connus(rendu, j % colonnes, j / colonnes, murs_connus, colonnes);
             }
             SDL_SetRenderDrawColor(rendu, 0, 255, 0, 255);
-            
-            // Calculer la position et taille du marqueur de destination avec la config
-            SDL_Rect dest_rect = {
-                g_config.offset_x + (destination_reelle % colonnes) * g_config.cell_size, 
-                g_config.offset_y + (destination_reelle / colonnes) * g_config.cell_size, 
-                g_config.cell_size, 
-                g_config.cell_size
-            };
+            SDL_Rect dest_rect = {(destination_reelle % colonnes) * TAILLE_CELLULE, (destination_reelle / colonnes) * TAILLE_CELLULE, TAILLE_CELLULE, TAILLE_CELLULE};
             SDL_RenderFillRect(rendu, &dest_rect);
-
-            // Calculer la position en pixels du personnage avec la config
-            float perso_px = g_config.offset_x + (pos_actuelle % colonnes + 0.5f) * g_config.cell_size;
-            float perso_py = g_config.offset_y + (pos_actuelle / colonnes + 0.5f) * g_config.cell_size;
-            dessiner_personnage(rendu, perso_texture, perso_px, perso_py);
-            
+            dessiner_personnage(rendu, perso_texture, (pos_actuelle % colonnes + 0.5f) * TAILLE_CELLULE, (pos_actuelle / colonnes + 0.5f) * TAILLE_CELLULE);
             SDL_RenderPresent(rendu);
             SDL_Delay(DELAI_PAS_EXPLORATION);
 
@@ -524,8 +451,8 @@ void demarrer_exploration_inconnue(int* murs_reels, int lignes, int colonnes, in
 
 int main() {
     unsigned int seed = time(NULL);
-    printf("seed est : %u\n", seed);
-    srand(seed); // Utiliser une seed différente à chaque fois
+    printf("seed est : %u", seed);
+    srand(1);
 
     int lignes = 20;
     int colonnes = 30;
@@ -548,13 +475,14 @@ int main() {
     //gidc
     //demarrer_exploration_dynamique(murs_reels, lignes, colonnes);
     
-    //int destination_secrete;
+    //int destination_secrete = nb_cellules-1;
     
     // On choisit une destination cachée aléatoire (pas le point de départ)
+    int destination_secrete;
     
-    int destination_secrete = rand() % (nb_cellules-1) + 1;
+    destination_secrete = rand() % (nb_cellules-1) + 1;
 
-    //printf("La destination secrète est en %d\n", destination_secrete);
+    printf("La destination secrète est en %d\n", destination_secrete);
 
     //gidi
     demarrer_exploration_inconnue(murs_reels, lignes, colonnes, destination_secrete);
@@ -775,5 +703,3 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 */
-
-    

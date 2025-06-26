@@ -9,7 +9,26 @@
 #define TUILE_TAILLE 16
 #define TAILLE_CELLULE 50
 
-#define EPES 3 // epesseur des murs 
+//#define EPES 3 // epesseur des murs 
+
+
+
+
+typedef struct {
+    int window_w;         // Largeur de la fenêtre en pixels
+    int window_h;         // Hauteur de la fenêtre en pixels
+    int cell_size;        // Taille d'une cellule calculée en pixels
+    int wall_thickness;   // Épaisseur d'un mur calculée en pixels
+    int offset_x;         // Marge horizontale pour centrer le labyrinthe
+    int offset_y;         // Marge verticale pour centrer le labyrinthe
+} RenderConfig;
+
+
+extern RenderConfig g_config;
+
+
+
+
 
 // Tableau global contenant les zones du tileset
 extern SDL_Rect src_murs[16];

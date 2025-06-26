@@ -391,12 +391,73 @@ void mettre_a_jour_monstre(Monstre* monstres, int monstre_index, int joueur_pos,
 // Fonction de jeu principale
 void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
     int nb_cellules = lignes * colonnes;
-    SDL_Init(SDL_INIT_VIDEO);
-    SDL_Window* fenetre = SDL_CreateWindow("Le Jeu", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, colonnes * TAILLE_CELLULE + 1, lignes * TAILLE_CELLULE, SDL_WINDOW_SHOWN);
+
+    // --- Initialisation SDL ---
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS) < 0) {
+        printf("SDL initialization failed: %s\n", SDL_GetError());
+        return 1;
+    }
+    if (!(IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG)) {
+        printf("SDL_image initialization failed: %s\n", IMG_GetError());
+        SDL_Quit();
+        return 1;
+    }
+    if (!init_audio_system()) {
+        IMG_Quit();
+        SDL_Quit();
+        return 1;
+    }
+
+    // Obtenir les dimensions de l'écran
+    SDL_DisplayMode dm;
+    if (SDL_GetDesktopDisplayMode(0, &dm) != 0) {
+        SDL_Log("SDL_GetDesktopDisplayMode failed: %s", SDL_GetError());
+        SDL_Quit();
+        return;
+    }
+
+    // Remplir les dimensions de la fenêtre dans notre config
+    g_config.window_w = dm.w;
+    g_config.window_h = dm.h;
+
+    // 2. Créer une fenêtre en plein écran
+    SDL_Window* fenetre = SDL_CreateWindow("Le Jeu", 
+                                           SDL_WINDOWPOS_CENTERED, 
+                                           SDL_WINDOWPOS_CENTERED, 
+                                           g_config.window_w + 1, 
+                                           g_config.window_h, 
+                                           SDL_WINDOW_FULLSCREEN_DESKTOP);
+    if (!fenetre) {
+        printf("erreur lors de la creation du fenêtre\n");
+        return;
+    }
+    
     SDL_Renderer* rendu = SDL_CreateRenderer(fenetre, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    
+    
+    // Calculer les dimensions proportionnelles
+    // Calcul de la taille de cellule pour que tout le labyrinthe rentre
+    int cell_w = g_config.window_w / colonnes;
+    int cell_h = g_config.window_h / lignes;
+    g_config.cell_size = (cell_w < cell_h) ? cell_w : cell_h; // On prend la plus petite pour garder les proportions
+
+    // L'épaisseur des murs est une fraction de la taille de la cellule
+    // On s'assure qu'elle est d'au moins 1 pixel.
+    g_config.wall_thickness = (int)(g_config.cell_size / 16.0f);
+    if (g_config.wall_thickness < 1) g_config.wall_thickness = 1;
+
+    // Calcul des marges pour centrer le labyrinthe dans la fenêtre
+    int laby_pixel_width = colonnes * g_config.cell_size;
+    int laby_pixel_height = lignes * g_config.cell_size;
+    g_config.offset_x = (g_config.window_w - laby_pixel_width) / 2;
+    g_config.offset_y = (g_config.window_h - laby_pixel_height) / 2;
+
+    
+    
     SDL_Texture* perso_texture = IMG_LoadTexture(rendu, "personnage.png");
     SDL_Texture* monstre_texture = IMG_LoadTexture(rendu, "monstre.png");
     SDL_Texture* piece_texture = IMG_LoadTexture(rendu, "piece.png");
+
 
     // Initialisation du Joueur
     Joueur joueur;
@@ -544,8 +605,12 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
 
         for (int i = 0; i < NOMBRE_PIECES; i++) {
             if (pieces_pos[i] != -1) {
+                // Calculer les coordonnées en pixels de la pièce en utilisant g_config
+                float piece_px = g_config.offset_x + (pieces_pos[i] % colonnes + 0.5f) * g_config.cell_size;
+                float piece_py = g_config.offset_y + (pieces_pos[i] / colonnes + 0.5f) * g_config.cell_size;
+                
                 // On réutilise la fonction dessiner_personnage, car elle dessine un sprite à une position
-                dessiner_personnage(rendu, piece_texture, (pieces_pos[i] % colonnes + 0.5f) * TAILLE_CELLULE, (pieces_pos[i] / colonnes + 0.5f) * TAILLE_CELLULE);
+                dessiner_personnage(rendu, piece_texture, piece_px, piece_py);
             }
         }
 
@@ -562,11 +627,16 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
         }
 
         
-        dessiner_personnage(rendu, perso_texture, (joueur.pos % colonnes + 0.5f) * TAILLE_CELLULE, (joueur.pos / colonnes + 0.5f) * TAILLE_CELLULE);
+        float joueur_px = g_config.offset_x + (joueur.pos % colonnes + 0.5f) * g_config.cell_size;
+        float joueur_py = g_config.offset_y + (joueur.pos / colonnes + 0.5f) * g_config.cell_size;
+        dessiner_personnage(rendu, perso_texture, joueur_px, joueur_py);
+
         for (int i = 0; i < NOMBRE_MONSTRES; i++) {
             if(monstres[i].mode == AI_MODE_HUNT) SDL_SetTextureColorMod(monstre_texture, 255, 100, 100); // Rouge
             else if (monstres[i].mode == AI_MODE_SEARCH_ZONE) SDL_SetTextureColorMod(monstre_texture, 100, 255, 100); // Jaune
-            dessiner_personnage(rendu, monstre_texture, (monstres[i].pos % colonnes + 0.5f) * TAILLE_CELLULE, (monstres[i].pos / colonnes + 0.5f) * TAILLE_CELLULE);
+            float monstre_px = g_config.offset_x + (monstres[i].pos % colonnes + 0.5f) * g_config.cell_size;
+            float monstre_py = g_config.offset_y + (monstres[i].pos / colonnes + 0.5f) * g_config.cell_size;
+            dessiner_personnage(rendu, monstre_texture, monstre_px, monstre_py);
         }
         SDL_RenderPresent(rendu);
     }
