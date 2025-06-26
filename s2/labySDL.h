@@ -22,9 +22,9 @@ void afficher_labyrinthe_sdl(arete arbre[], int nb_aretes, int lignes, int colon
 
 // Version avec tuiles
 void dessiner_tuile(SDL_Renderer* rendu, SDL_Texture* tileset, int* murs, int x, int y, int colonnes);
-void dessiner_tuile_v2(SDL_Renderer* rendu, SDL_Texture* tileset, const int* murs, int x, int y, int colonnes);
+void dessiner_tuile_v2(SDL_Renderer* rendu, SDL_Texture* tileset, int x, int y);
 void afficher_labyrinthe_sdl_tuiles(int *murs, int lignes, int colonnes);
-void dessiner_bg(SDL_Renderer* rendu, const int* murs, int lignes, int colonnes);
+void dessiner_bg(SDL_Renderer* rendu, int lignes, int colonnes);
 
 
 // Fonctions de dessin modulaires pour l'animation

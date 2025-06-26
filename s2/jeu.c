@@ -507,7 +507,7 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
                         // On ne peut sauter que si le cooldown est terminé
                         if (joueur.saut_cooldown == 0) {
                             int pos_apres_saut = -1;
-                            // On vérifie s'il y a bien un mur dans la direction où le joueur regarde
+                            // On vérifie s'il y a bien un mur dans la direction où le joueur regarde et qu'il ne sort pas du labyrinthe
                             if (murs_reels[joueur.pos] & joueur.direction) {
                                 // Calculer la position de l'autre côté du mur
                                 if (joueur.direction == 1) pos_apres_saut = joueur.pos - colonnes; // HAUT
@@ -519,9 +519,11 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
                                 int x, y;
                                 indice_vers_coord(pos_apres_saut, colonnes, &x, &y);
                                 if (x >= 0 && x < colonnes && y >= 0 && y < lignes) {
+                                    if(((joueur.direction == 2 || joueur.direction == 8) && joueur.pos/colonnes == y) || joueur.direction==1 || joueur.direction==4) {
                                     printf("Le joueur a sauté par-dessus un mur !\n");
                                     joueur.pos = pos_apres_saut;
                                     joueur.saut_cooldown = SAUT_COOLDOWN; // Activer le cooldown
+                                    }
                                 }
                             }
                         }
@@ -567,7 +569,7 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
         SDL_RenderClear(rendu);
 
         //dessin de bg
-        dessiner_bg(rendu, murs_reels, lignes, colonnes);
+        dessiner_bg(rendu, lignes, colonnes);
 
         for (int i = 0; i < NOMBRE_PIECES; i++) {
             if (pieces_pos[i] != -1) {

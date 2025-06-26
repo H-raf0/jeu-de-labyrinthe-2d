@@ -116,7 +116,7 @@ void dessiner_tuile(SDL_Renderer* rendu, SDL_Texture* tileset, int* murs, int x,
 
 
 
-void dessiner_tuile_v2(SDL_Renderer* rendu, SDL_Texture* tileset, const int* murs, int x, int y, int colonnes){
+void dessiner_tuile_v2(SDL_Renderer* rendu, SDL_Texture* tileset, int x, int y){
     
 
     SDL_Rect dst; // Le rectangle de destination SUR l'écran
@@ -135,7 +135,7 @@ void dessiner_tuile_v2(SDL_Renderer* rendu, SDL_Texture* tileset, const int* mur
 }
 
 
-void dessiner_bg(SDL_Renderer* rendu, const int* murs, int lignes, int colonnes) {
+void dessiner_bg(SDL_Renderer* rendu, int lignes, int colonnes) {
     // Charger l'image comme surface
     SDL_Surface* tileset_surface = IMG_Load("tileset2.png");
     if (!tileset_surface) {
@@ -160,7 +160,7 @@ void dessiner_bg(SDL_Renderer* rendu, const int* murs, int lignes, int colonnes)
     // Boucle pour dessiner chaque tuile
     for (int y = 0; y < lignes; y++) {
         for (int x = 0; x < colonnes; x++) {
-            dessiner_tuile_v2(rendu, tileset, murs, x, y, colonnes);
+            dessiner_tuile_v2(rendu, tileset, x, y);
         }
     }
 

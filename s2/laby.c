@@ -438,7 +438,7 @@ void afficher_labyrinthe_unicode(int *murs, int lignes, int colonnes) {
 
 /*
 
-/**********************************************
+/ **********************************************
                     BFS
 *********************************************** /
 void BFS(int m_adj[N][N], int origine,noeud* n){
@@ -460,7 +460,7 @@ void BFS(int m_adj[N][N], int origine,noeud* n){
     free(f);
 }
 
-/**********************************************
+/ **********************************************
                 DIJKSTRA    
 *********************************************** /
 void dijkstra(int graphe[N][N], int origine, noeud *n) {
@@ -485,7 +485,7 @@ void dijkstra(int graphe[N][N], int origine, noeud *n) {
     }
 }
 
-/**********************************************
+/ **********************************************
                 A_etoile 
 *********************************************** /
 
@@ -811,7 +811,7 @@ int A_etoile_laby(int *murs, int lignes, int colonnes, int depart, int destinati
 // Fonction pour comparer les heuristiques
 void comparer_heuristiques_A_etoile(int* murs, int lignes, int colonnes, int depart, int destination) {
     noeud n;
-    int nb_cellules = lignes * colonnes;
+    //int nb_cellules = lignes * colonnes;
     int noeuds_visites;
 
     printf("\n--- Comparaison des Heuristiques A* pour le trajet %d -> %d ---\n", depart, destination);
