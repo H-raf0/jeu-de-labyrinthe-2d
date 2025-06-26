@@ -450,7 +450,7 @@ void demarrer_exploration_inconnue(int* murs_reels, int lignes, int colonnes, in
 
 
 int main() {
-    srand(time(NULL));
+    srand(1);
     int lignes = 20;
     int colonnes = 30;
     int nb_cellules = lignes * colonnes;
@@ -468,7 +468,7 @@ int main() {
     for (int i = 0; i < nb_aretes_arbre; i++) supprimer_mur(murs_reels, colonnes, arbre[i].u, arbre[i].v);
     free(arbre);
 
-    //lancer_animation_labyrinthe(murs_reels, lignes, colonnes);
+    lancer_animation_labyrinthe(murs_reels, lignes, colonnes);
     //demarrer_exploration_dynamique(murs_reels, lignes, colonnes);
     
     //int destination_secrete = nb_cellules-1;
@@ -480,7 +480,7 @@ int main() {
 
     printf("La destination secrète est en %d\n", destination_secrete);
 
-    demarrer_exploration_inconnue(murs_reels, lignes, colonnes, destination_secrete);
+    //demarrer_exploration_inconnue(murs_reels, lignes, colonnes, destination_secrete);
     
     
     

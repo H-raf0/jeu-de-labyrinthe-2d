@@ -38,6 +38,9 @@ void ajouter_mur(int *murs, int colonnes, int u, int v);
 //================== Manipulation de Graphe ====================
 int** creer_matrice_adjacence_cout_altr(int* murs, int lignes, int colonnes);
 int** creer_matrice_adjacence_connue(int* murs_connus, int lignes, int colonnes);
+
+int** creer_matrice_couts_dynamiques(int* murs_connus, const int* penalite_map, int lignes, int colonnes);
+
 int** creer_matrice_couts_connus(int* murs_connus, int* passages_counts, int lignes, int colonnes);
 void liberer_matrice_adjacence(int** matrice, int nb_cellules);
 

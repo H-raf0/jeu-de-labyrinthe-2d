@@ -131,7 +131,10 @@ int** creer_matrice_adjacence_cout_altr(int* murs, int lignes, int colonnes) {
     if (!matrice) return NULL;
     for (int i = 0; i < nb_cellules; i++) {
         matrice[i] = calloc(nb_cellules, sizeof(int));
-        if (!matrice[i]) { /* ... gestion erreur ... */ return NULL; }
+        if (!matrice[i]) {
+            printf("erreur lors de la création de la matrice d'adjacence\n");
+            return NULL; 
+        }
     }
 
     // Remplir la matrice
@@ -178,7 +181,10 @@ int** creer_matrice_adjacence_connue(int* murs_connus, int lignes, int colonnes)
     if (!matrice) return NULL;
     for (int i = 0; i < nb_cellules; i++) {
         matrice[i] = calloc(nb_cellules, sizeof(int));
-        if (!matrice[i]) { /* ... gestion erreur ... */ return NULL; }
+        if (!matrice[i]) {
+            printf("erreur lors de la création de la matrice d'adjacence\n");
+            return NULL; 
+        }
     }
 
     // Remplir la matrice
@@ -216,13 +222,70 @@ int** creer_matrice_adjacence_connue(int* murs_connus, int lignes, int colonnes)
 
 
 
+int** creer_matrice_couts_dynamiques(int* murs_connus, const int* penalite_map, int lignes, int colonnes) {
+    int nb_cellules = lignes * colonnes;
+    int** matrice = malloc(sizeof(int*) * nb_cellules);
+    if (!matrice) return NULL;
+    for (int i = 0; i < nb_cellules; i++) {
+        matrice[i] = calloc(nb_cellules, sizeof(int));
+        if (!matrice[i]) {
+            printf("erreur lors de la création de la matrice d'adjacence\n");
+            return NULL; 
+        }
+    }
+
+    for (int u = 0; u < nb_cellules; u++) {
+        int x, y;
+        indice_vers_coord(u, colonnes, &x, &y);
+        int v;
+        int cout_aller, cout_retour;
+
+        // Voisin du haut
+        if (y > 0 && !(murs_connus[u] & 1)) {
+            v = (y - 1) * colonnes + x;
+            cout_aller = 1 + penalite_map[v];
+            cout_retour = 1 + penalite_map[u];
+            matrice[u][v] = cout_aller;
+            matrice[v][u] = cout_retour;
+        }
+        // Voisin de droite
+        if (x < colonnes - 1 && !(murs_connus[u] & 2)) {
+            v = y * colonnes + (x + 1);
+            cout_aller = 1 + penalite_map[v];
+            cout_retour = 1 + penalite_map[u];
+            matrice[u][v] = cout_aller;
+            matrice[v][u] = cout_retour;
+        }
+        // Voisin du bas
+        if (y < lignes - 1 && !(murs_connus[u] & 4)) {
+            v = (y + 1) * colonnes + x;
+            cout_aller = 1 + penalite_map[v];
+            cout_retour = 1 + penalite_map[u];
+            matrice[u][v] = cout_aller;
+            matrice[v][u] = cout_retour;
+        }
+        // Voisin de gauche
+        if (x > 0 && !(murs_connus[u] & 8)) {
+            v = y * colonnes + (x - 1);
+            cout_aller = 1 + penalite_map[v];
+            cout_retour = 1 + penalite_map[u];
+            matrice[u][v] = cout_aller;
+            matrice[v][u] = cout_retour;
+        }
+    }
+    return matrice;
+}
+
 int** creer_matrice_couts_connus(int* murs_connus, int* passages_counts, int lignes, int colonnes) {
     int nb_cellules = lignes * colonnes;
     int** matrice = malloc(sizeof(int*) * nb_cellules);
     if (!matrice) return NULL;
     for (int i = 0; i < nb_cellules; i++) {
         matrice[i] = calloc(nb_cellules, sizeof(int));
-        if (!matrice[i]) { /* ... gestion erreur ... */ return NULL; }
+        if (!matrice[i]) {
+            printf("erreur lors de la création de la matrice d'adjacence\n");
+            return NULL; 
+        }
     }
 
     for (int u = 0; u < nb_cellules; u++) {
