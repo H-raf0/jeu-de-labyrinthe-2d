@@ -1,102 +1,122 @@
-void mettre_a_jour_monstre(Monstre* monstres, int monstre_index, int joueur_pos, int* murs_reels, int lignes, int colonnes) {
-    Monstre* monstre = &monstres[monstre_index];
-    int nb_cellules = lignes * colonnes;
+#include <stdio.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_mixer.h> 
 
-    // --- PERCEPTION & DÉCISION DU MODE (INCHANGÉ) ---
-    int j_x, j_y, m_x, m_y;
-    indice_vers_coord(joueur_pos, colonnes, &j_x, &j_y);
-    indice_vers_coord(monstre->pos, colonnes, &m_x, &m_y);
-    int distance = abs(j_x - m_x) + abs(j_y - m_y);
-    if (monstre->timer_piste > 0) monstre->timer_piste--;
-    int old_mode = monstre->mode;
-    if (distance <= SEUIL_DETECTION_HUNT) {
-        monstre->mode = AI_MODE_HUNT;
-        if (old_mode != AI_MODE_HUNT) printf("Monstre %d -> MODE CHASSE (Détection directe)\n", monstre->pos);
-        monstre->drnier_pos_jr_connu = joueur_pos;
-        monstre->timer_piste = DUREE_PISTE;
-    } 
-    else if (monstre->timer_piste > 0) {
-        monstre->mode = AI_MODE_HUNT;
-        if (old_mode != AI_MODE_HUNT) printf("Monstre %d -> MODE CHASSE (Poursuite de la piste)\n", monstre->pos);
-    } 
-    else {
-        monstre->mode = AI_MODE_SEARCH_ZONE;
-        if (old_mode != AI_MODE_SEARCH_ZONE){
-            printf("Monstre %d -> MODE RECHERCHE (Piste perdue)\n", monstre->pos);
-            monstre->drnier_pos_jr_connu = monstre->pos; 
-            monstre->frontier_size = 0;
-            memset(monstre->noeuds_visites_zone, 0, sizeof(bool) * (lignes*colonnes));
-            monstre->frontier_nodes[monstre->frontier_size++] = monstre->pos;
-        }
+// Pointeur global pour notre effet sonore.
+// On utilise un Mix_Chunk car c'est un son court, chargé en mémoire.
+// Pour une longue musique de fond, on utiliserait Mix_Music.
+Mix_Chunk *sonEffet = NULL;
+
+/**
+ * @brief Initialise SDL_mixer et charge le fichier son.
+ * 
+ * @param chemin_fichier_son Le chemin vers le fichier .mp3 ou .wav.
+ * @return int 1 en cas de succès, 0 en cas d'échec.
+ */
+int init_audio(const char* chemin_fichier_son) {
+    // Initialiser SDL_mixer
+    // 44100 : fréquence en Hz (standard)
+    // MIX_DEFAULT_FORMAT : format audio par défaut
+    // 2 : nombre de canaux (stéréo)
+    // 2048 : taille du buffer (une bonne valeur par défaut)
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
+        printf("Erreur d'initialisation de SDL_mixer: %s\n", Mix_GetError());
+        return 0; // Échec
     }
 
-    if (monstre->move_cooldown > 0) {
-        monstre->move_cooldown--;
-        return;
-    }
-    monstre->move_cooldown = VITESSE_MONSTRE;
-
-    // --- NOUVEAU: CRÉATION DE LA CARTE DE PÉNALITÉS ---
-    int* penalite_map = calloc(nb_cellules, sizeof(int));
-    if (!penalite_map) return; // Sécurité
-
-    for (int i = 0; i < NOMBRE_MONSTRES; i++) {
-        if (i == monstre_index) continue; // Ne pas se pénaliser soi-même
-
-        int autre_monstre_pos = monstres[i].pos;
-        int am_x, am_y;
-        indice_vers_coord(autre_monstre_pos, colonnes, &am_x, &am_y);
-
-        // Appliquer une pénalité dans un rayon autour de l'autre monstre
-        for (int y_p = am_y - MONSTRE_PENALITE_RAYON; y_p <= am_y + MONSTRE_PENALITE_RAYON; y_p++) {
-            for (int x_p = am_x - MONSTRE_PENALITE_RAYON; x_p <= am_x + MONSTRE_PENALITE_RAYON; x_p++) {
-                if (x_p >= 0 && x_p < colonnes && y_p >= 0 && y_p < lignes) {
-                    int dist = abs(x_p - am_x) + abs(y_p - am_y);
-                    if (dist <= MONSTRE_PENALITE_RAYON) {
-                        int penalite = MONSTRE_PENALITE_COUT * (MONSTRE_PENALITE_RAYON - dist) / MONSTRE_PENALITE_RAYON;
-                        int cell_idx = y_p * colonnes + x_p;
-                        penalite_map[cell_idx] += penalite; // On ajoute, au cas où plusieurs monstres sont proches
-                    }
-                }
-            }
-        }
+    // Charger le fichier son dans notre Mix_Chunk
+    // Mix_LoadWAV peut charger des WAV, MP3, OGG, etc.
+    sonEffet = Mix_LoadWAV(chemin_fichier_son);
+    if (sonEffet == NULL) {
+        printf("Erreur de chargement du fichier son '%s': %s\n", chemin_fichier_son, Mix_GetError());
+        Mix_CloseAudio();
+        return 0; // Échec
     }
 
-    int prochaine_position_planifiee = monstre->pos;
-    
-    switch (monstre->mode) {
-        case AI_MODE_HUNT:
-            // MODIFIÉ: On passe la penalite_map à gidc
-            prochaine_position_planifiee = gidc(monstre, murs_reels, lignes, colonnes, joueur_pos, penalite_map);
-            monstre->rapp_cooldown = 0;
-            break;
-        case AI_MODE_SEARCH_ZONE:
-            if (monstre->pos != monstre->drnier_pos_jr_connu && monstre->rapp_cooldown == 0) {
-                 // MODIFIÉ: On passe la penalite_map à gidc
-                prochaine_position_planifiee = gidc(monstre, murs_reels, lignes, colonnes, monstre->drnier_pos_jr_connu, penalite_map);
-                if (prochaine_position_planifiee == monstre->drnier_pos_jr_connu) {
-                    monstre->rapp_cooldown = RAPP_CLDWN;
-                }
-            } else {
-                // MODIFIÉ: On passe la penalite_map à gidi
-                prochaine_position_planifiee = gidi(monstre, murs_reels, lignes, colonnes, penalite_map);
-                if (monstre->rapp_cooldown >= 1){
-                    printf("\ncooldown :%d\n", monstre->rapp_cooldown);
-                    monstre->rapp_cooldown--;
-                }
-                if (monstre->rapp_cooldown == 1){
-                    monstre->drnier_pos_jr_connu = joueur_pos;
-                }
-            }
-            break;
-    }
-    
-    // NOUVEAU: Libérer la mémoire de la carte de pénalités
-    free(penalite_map);
-
-    monstre->pos = prochaine_position_planifiee;
+    printf("Audio initialisé et son chargé avec succès.\n");
+    return 1; // Succès
 }
 
-    
+/**
+ * @brief Joue le son qui a été chargé.
+ */
+void jouer_son() {
+    if (sonEffet != NULL) {
+        // Joue le son sur le premier canal disponible (-1)
+        // Le 0 signifie qu'on ne le joue pas en boucle (on le joue 1 fois).
+        Mix_PlayChannel(-1, sonEffet, 0);
+    } else {
+        printf("Impossible de jouer le son : il n'a pas été chargé.\n");
+    }
+}
 
-IGNORE_WHEN_COPYING_START
+/**
+ * @brief Libère la mémoire du son et ferme SDL_mixer.
+ */
+void cleanup_audio() {
+    // Libère la mémoire occupée par le son
+    if (sonEffet != NULL) {
+        Mix_FreeChunk(sonEffet);
+        sonEffet = NULL;
+    }
+
+    // Ferme le sous-système SDL_mixer
+    Mix_CloseAudio();
+    Mix_Quit();
+    printf("Audio nettoyé.\n");
+}
+
+
+// --- Fonction principale de démonstration ---
+int main(int argc, char* argv[]) {
+    // Initialisation de base de SDL
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
+        printf("Erreur d'initialisation de SDL: %s\n", SDL_GetError());
+        return -1;
+    }
+
+    // Crée une fenêtre simple pour pouvoir recevoir les événements clavier
+    SDL_Window* fenetre = SDL_CreateWindow("Test de Son", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 320, 240, SDL_WINDOW_SHOWN);
+    if (!fenetre) {
+        printf("Erreur de création de la fenêtre: %s\n", SDL_GetError());
+        SDL_Quit();
+        return -1;
+    }
+
+    // --- NOTRE PARTIE AUDIO ---
+    // 1. Initialiser l'audio et charger notre son
+    if (!init_audio("son.mp3")) {
+        // Si l'initialisation échoue, on quitte.
+        SDL_DestroyWindow(fenetre);
+        SDL_Quit();
+        return -1;
+    }
+
+    printf("Appuyez sur n'importe quelle touche pour jouer le son. Fermez la fenêtre pour quitter.\n");
+
+    // Boucle d'événements
+    SDL_Event e;
+    int quitter = 0;
+    while (!quitter) {
+        while (SDL_PollEvent(&e)) {
+            if (e.type == SDL_QUIT) {
+                quitter = 1;
+            }
+            // Si on appuie sur une touche
+            if (e.type == SDL_KEYDOWN) {
+                printf("Touche pressée ! On joue le son...\n");
+                // 2. Appeler la fonction pour jouer le son
+                jouer_son();
+            }
+        }
+    }
+
+    // --- NETTOYAGE ---
+    // 3. Nettoyer les ressources audio avant de quitter
+    cleanup_audio();
+    
+    SDL_DestroyWindow(fenetre);
+    SDL_Quit();
+
+    return 0;
+}

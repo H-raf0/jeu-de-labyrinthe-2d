@@ -453,6 +453,7 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
         m->move_cooldown = 1;//i * 2;
     }
 
+    
     //generation des pieces
     int* pieces_pos = malloc(sizeof(int) * NOMBRE_PIECES);
     int pieces_collectees = 0;
@@ -506,7 +507,7 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
                         // On ne peut sauter que si le cooldown est terminé
                         if (joueur.saut_cooldown == 0) {
                             int pos_apres_saut = -1;
-                            // On vérifie s'il y a bien un mur dans la direction où le joueur regarde
+                            // On vérifie s'il y a bien un mur dans la direction où le joueur regarde et qu'il ne sort pas du labyrinthe
                             if (murs_reels[joueur.pos] & joueur.direction) {
                                 // Calculer la position de l'autre côté du mur
                                 if (joueur.direction == 1) pos_apres_saut = joueur.pos - colonnes; // HAUT
@@ -518,9 +519,11 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
                                 int x, y;
                                 indice_vers_coord(pos_apres_saut, colonnes, &x, &y);
                                 if (x >= 0 && x < colonnes && y >= 0 && y < lignes) {
+                                    if(((joueur.direction == 2 || joueur.direction == 8) && joueur.pos/colonnes == y) || joueur.direction==1 || joueur.direction==4) {
                                     printf("Le joueur a sauté par-dessus un mur !\n");
                                     joueur.pos = pos_apres_saut;
                                     joueur.saut_cooldown = SAUT_COOLDOWN; // Activer le cooldown
+                                    }
                                 }
                             }
                         }
@@ -565,6 +568,9 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
         SDL_SetRenderDrawColor(rendu, 20, 0, 30, 255);
         SDL_RenderClear(rendu);
 
+        //dessin de bg
+        dessiner_bg(rendu, lignes, colonnes);
+
         for (int i = 0; i < NOMBRE_PIECES; i++) {
             if (pieces_pos[i] != -1) {
                 // On réutilise la fonction dessiner_personnage, car elle dessine un sprite à une position
@@ -574,8 +580,10 @@ void lancer_jeu(int* murs_reels, int lignes, int colonnes) {
 
 
         SDL_SetRenderDrawColor(rendu, 100, 80, 200, 255);
-        for (int i = 0; i < nb_cellules; i++) dessiner_murs(rendu, i % colonnes, i / colonnes, murs_reels, colonnes);
         
+
+        for (int i = 0; i < nb_cellules; i++) dessiner_murs_connus(rendu, i % colonnes, i / colonnes, murs_reels, colonnes);
+
         for (int i = 0; i < NOMBRE_MONSTRES; i++) {
             if (monstres[i].mode == AI_MODE_HUNT) {
                 dessiner_rayon_detection(rendu, monstres[i].pos, SEUIL_DETECTION_HUNT, lignes, colonnes);
