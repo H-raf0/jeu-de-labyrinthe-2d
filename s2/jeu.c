@@ -17,24 +17,28 @@
 #define AI_MODE_SEARCH_ZONE 0
 #define AI_MODE_HUNT 1
 
-#define NOMBRE_MONSTRES 3
-#define SEUIL_DETECTION_HUNT 6
-#define DUREE_PISTE 500
-#define RAPP_CLDWN 100
-#define MEMOIRE_MAX 99999
-#define VITESSE_MONSTRE 0
 
-#define MONSTRE_PENALITE_RAYON 4
-#define MONSTRE_PENALITE_COUT 20
 
-#define SAUT_COOLDOWN 30 // Cooldown en frames (ex: 30 frames)
+int NOMBRE_MONSTRES = 3;
+int SEUIL_DETECTION_HUNT = 6;
+int DUREE_PISTE = 500;
+int RAPP_CLDWN = 100;
+int MEMOIRE_MAX = 99999;
+int VITESSE_MONSTRE = 0;
+int MONSTRE_PENALITE_RAYON = 4;
+int MONSTRE_PENALITE_COUT = 20;
 
-#define NOMBRE_PIECES 3
+int SAUT_COOLDOWN = 30; // Cooldown en frames
+
+int NOMBRE_PIECES = 3;
+
+
 
 // NOUVEAU : Constantes pour l'animation de l'astronaute
 #define ASTRO_FRAME_WIDTH 16
 #define ASTRO_FRAME_HEIGHT 16
 #define ASTRO_FRAME_COUNT 6
+
 #define VITESSE_DEPLACEMENT 4.0f // Vitesse du joueur en pixels par frame. Ajustez si besoin.
 
 
@@ -494,14 +498,14 @@ void dessiner_joueur_anime(SDL_Renderer * rendu, Joueur * joueur) {
 
 
 // Fonction de jeu principale
-void lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colonnes) {
+GameResult lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colonnes, AudioData* audio){
     int nb_cellules = lignes * colonnes;
 
     // --- Configuration de la fenêtre et du rendu (inchangé) ---
     SDL_DisplayMode dm;
     if (SDL_GetDesktopDisplayMode(0, &dm) != 0) {
         SDL_Log("SDL_GetDesktopDisplayMode failed: %s", SDL_GetError());
-        return;
+        exit(-1);
     }
     g_config.window_w = dm.w;
     g_config.window_h = dm.h;
@@ -515,7 +519,7 @@ void lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colonnes) 
 
     // --- Chargement des textures (inchangé) ---
     SDL_Texture* perso_texture = IMG_LoadTexture(rendu, "CosmicLilac_AnimatedSpriteSheet.png");
-    SDL_Texture* piece_texture = IMG_LoadTexture(rendu, "piece.png");
+    SDL_Texture* piece_texture = IMG_LoadTexture(rendu, "o2.png");
     SDL_Texture* monstre_textures[5];
     monstre_textures[IDLE] = NULL;
     monstre_textures[DOWN] = IMG_LoadTexture(rendu, "Carry_Run_Down-Sheet.png");
@@ -525,7 +529,7 @@ void lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colonnes) 
     if (!perso_texture || !piece_texture || !monstre_textures[DOWN] || !monstre_textures[RIGHT] ||
         !monstre_textures[UP]) {
         printf("Erreur lors du chargement d'une texture: %s\n", IMG_GetError());
-        return;
+        exit(-1);
     }
 
     // --- Initialisation du Joueur et des Monstres (inchangé) ---
@@ -548,7 +552,7 @@ void lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colonnes) 
     for (int i = 0; i < NOMBRE_MONSTRES; i++) {
         //... (code d'initialisation des monstres inchangé) ...
         Monstre* m = &monstres[i];
-        m->pos = nb_cellules - 1 - i * 2;
+        m->pos = nb_cellules - 1 - i * 2 * (rand()%colonnes);
         m->mode = AI_MODE_SEARCH_ZONE;
         m->timer_piste = 0;
         m->murs_connus = calloc(nb_cellules, sizeof(int));
@@ -749,17 +753,56 @@ void lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colonnes) 
             if (pieces_pos[i] != -1 && joueur.pos == pieces_pos[i]) {
                 pieces_pos[i] = -1;
                 pieces_collectees++;
+                printf("Pièce collectée ! (%d / %d)\n", pieces_collectees, NOMBRE_PIECES);
+
+                // NOUVEAU : Jouer le son de la pièce !
+                play_o2_sound(audio);
             }
         }
         if (pieces_collectees == NOMBRE_PIECES) {
             printf("VICTOIRE !\n");
-            quitter = true;
+
+            Mix_HaltMusic(); // Arrête la musique de fond pour plus d'impact
+            play_victory_sound(audio);
+            SDL_Delay(1500); // Petite pause pour laisser le son se jouer
+            
+            free(pieces_pos);
+            for (int i = 0; i < NOMBRE_MONSTRES; i++) {
+                free(monstres[i].murs_connus);
+                free(monstres[i].memoire_murs);
+                free(monstres[i].noeuds_visites_zone);
+                free(monstres[i].frontier_nodes);
+            }
+            SDL_DestroyTexture(perso_texture);
+            SDL_DestroyTexture(piece_texture);
+            SDL_DestroyTexture(monstre_textures[DOWN]);
+            SDL_DestroyTexture(monstre_textures[RIGHT]);
+            SDL_DestroyTexture(monstre_textures[UP]);
+            
+            return GAME_WON; // NOUVEAU : On retourne l'état de victoire
         }
         for (int i = 0; i < NOMBRE_MONSTRES; i++) {
             mettre_a_jour_monstre(monstres, i, joueur.pos, murs_reels, lignes, colonnes);
             if (monstres[i].pos == joueur.pos) {
                 printf("GAME OVER !\n");
-                quitter = true;
+                
+                Mix_HaltMusic(); // Arrête la musique de fond pour plus d'impact
+                play_failure_sound(audio);
+                SDL_Delay(1500); // Petite pause pour laisser le son se jouer
+
+                free(pieces_pos);
+                for (int i = 0; i < NOMBRE_MONSTRES; i++) {
+                    free(monstres[i].murs_connus);
+                    free(monstres[i].memoire_murs);
+                    free(monstres[i].noeuds_visites_zone);
+                    free(monstres[i].frontier_nodes);
+                }
+                SDL_DestroyTexture(perso_texture);
+                SDL_DestroyTexture(piece_texture);
+                SDL_DestroyTexture(monstre_textures[DOWN]);
+                SDL_DestroyTexture(monstre_textures[RIGHT]);
+                SDL_DestroyTexture(monstre_textures[UP]);
+                return GAME_LOST; 
             }
         }
 
@@ -814,6 +857,8 @@ void lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colonnes) 
     SDL_DestroyTexture(monstre_textures[DOWN]);
     SDL_DestroyTexture(monstre_textures[RIGHT]);
     SDL_DestroyTexture(monstre_textures[UP]);
+
+    return GAME_QUIT_MANUALLY;
 }
 
 

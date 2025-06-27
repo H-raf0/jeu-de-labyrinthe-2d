@@ -5,13 +5,19 @@
 #include "audio.h"
 #include "laby.h"
 #include "jeu.h"
+//#include "endscreen.h"
 
 // Note : g_config est une variable globale définie dans labySDL.c
 // et déclarée comme 'extern' via labySDL.h (inclus par jeu.h ou laby.h)
 // Elle contiendra les dimensions de l'écran.
 
+
+int LABY_HE = 20;
+int LABY_WI = 30;
+
+
 // La signature de la fonction ne change pas, car elle utilisera g_config
-void show_main_menu(SDL_Window* window, SDL_Renderer* renderer, int* murs_reels, int lignes, int colonnes) {
+void show_main_menu(SDL_Window* window, SDL_Renderer* renderer) {
     // --- Chargement des ressources du menu ---
     AudioData audio_data;
     load_sounds(&audio_data);
@@ -65,8 +71,101 @@ void show_main_menu(SDL_Window* window, SDL_Renderer* renderer, int* murs_reels,
 
                 if (SDL_PointInRect(&mouse_pos, &play_rect)) {
                     printf("Lancement du jeu niveau %s !\n", difficulty_names[current_difficulty]);
+
+
+                    switch(current_difficulty) {
+                        default:
+                        case EASY:
+                            LABY_HE = 10;
+                            LABY_WI = 15;
+                            NOMBRE_MONSTRES = 2;
+                            SEUIL_DETECTION_HUNT = 2;
+                            DUREE_PISTE = 50;
+                            RAPP_CLDWN = 200;
+                            MEMOIRE_MAX = 30;
+                            VITESSE_MONSTRE = 10;
+                            MONSTRE_PENALITE_RAYON = 4;
+                            MONSTRE_PENALITE_COUT = 20;
+
+                            SAUT_COOLDOWN = 10; // Cooldown en frames
+
+                            NOMBRE_PIECES = 1;
+                            break;
+                        case MEDIUM:
+                            LABY_HE = 20;
+                            LABY_WI = 25;
+                            NOMBRE_MONSTRES = 3;
+                            SEUIL_DETECTION_HUNT = 7;
+                            DUREE_PISTE = 150;
+                            RAPP_CLDWN = 80;
+                            MEMOIRE_MAX = 200;
+                            VITESSE_MONSTRE = 0;
+                            MONSTRE_PENALITE_RAYON = 4;
+                            MONSTRE_PENALITE_COUT = 20;
+
+                            SAUT_COOLDOWN = 100; // Cooldown en frames
+
+                            NOMBRE_PIECES = 2;
+                            break;
+                        case HARD:
+                            LABY_HE = 30;
+                            LABY_WI = 40;
+                            NOMBRE_MONSTRES = 5;
+                            SEUIL_DETECTION_HUNT = 10;
+                            DUREE_PISTE = 300;
+                            RAPP_CLDWN = 50;
+                            MEMOIRE_MAX = 99999;
+                            VITESSE_MONSTRE = 0;
+                            MONSTRE_PENALITE_RAYON = 5;
+                            MONSTRE_PENALITE_COUT = 25;
+
+                            SAUT_COOLDOWN = 500; // Cooldown en frames
+
+                            NOMBRE_PIECES = 3;
+                            break;
+                    }
+
+                    
+                    // 2. GÉNÉRER LE LABYRINTHE MAINTENANT, AVEC LES BONNES DIMENSIONS
+                    int lignes = LABY_HE;
+                    int colonnes = LABY_WI;
+                    int nb_cellules = lignes * colonnes;
+                    
+                    arete *toutes_aretes;
+                    int nb_total_aretes = generation_grille_vide(&toutes_aretes, lignes, colonnes);
+                    fisher_yates(toutes_aretes, nb_total_aretes);
+                    
+                    arete *arbre = malloc(sizeof(arete) * (nb_cellules - 1));
+                    int nb_aretes_arbre;
+                    construire_arbre_couvrant(toutes_aretes, nb_total_aretes, arbre, &nb_aretes_arbre, nb_cellules);
+                    free(toutes_aretes);
+                    
+                    int *murs_reels = malloc(sizeof(int) * nb_cellules);
+                    for (int i = 0; i < nb_cellules; i++) murs_reels[i] = 1 | 2 | 4 | 8;
+                    for (int i = 0; i < nb_aretes_arbre; i++) supprimer_mur(murs_reels, colonnes, arbre[i].u, arbre[i].v);
+                    free(arbre);
+
+
                     start_game_music(&audio_data);
-                    lancer_jeu(renderer, murs_reels, lignes, colonnes);
+                    GameResult result = lancer_jeu(renderer, murs_reels, lignes, colonnes, &audio_data);
+                    
+
+                    free(murs_reels);
+
+
+                    // NOUVEAU : On agit en fonction du résultat
+                    switch(result) {
+                        case GAME_WON:
+                            show_end_screen(renderer, "congratulations.bmp"); // Utilisez PNG pour la transparence
+                            break;
+                        case GAME_LOST:
+                            show_end_screen(renderer, "gameover.bmp");
+                            break;
+                        case GAME_QUIT_MANUALLY:
+                            // Ne rien faire, on retourne juste au menu
+                            break;
+                    }
+                    
                     start_menu_music(&audio_data);
                     
                 } else if (SDL_PointInRect(&mouse_pos, &diff_left_arrow_rect)) {
@@ -165,30 +264,14 @@ int main(int argc, char* argv[]) {
 
     // --- Génération du Labyrinthe (logique de l'ancien main de jeu.c) ---
     srand(time(NULL));
-    int lignes = 20;
-    int colonnes = 30; // Augmenté pour mieux s'adapter aux écrans larges
-    int nb_cellules = lignes * colonnes;
     
-    arete *toutes_aretes;
-    int nb_total_aretes = generation_grille_vide(&toutes_aretes, lignes, colonnes);
-    fisher_yates(toutes_aretes, nb_total_aretes);
-    arete *arbre = malloc(sizeof(arete) * (nb_cellules - 1));
-    int nb_aretes_arbre;
-    construire_arbre_couvrant(toutes_aretes, nb_total_aretes, arbre, &nb_aretes_arbre, nb_cellules);
-    free(toutes_aretes);
-    
-    int *murs_reels = malloc(sizeof(int) * nb_cellules);
-    for (int i = 0; i < nb_cellules; i++) murs_reels[i] = 1 | 2 | 4 | 8;
-    for (int i = 0; i < nb_aretes_arbre; i++) supprimer_mur(murs_reels, colonnes, arbre[i].u, arbre[i].v);
-    free(arbre);
 
     // --- Lancement du Menu ---
     // La fenêtre est déjà en plein écran, et g_config est prête
-    show_main_menu(window, renderer, murs_reels, lignes, colonnes);
+    show_main_menu(window, renderer);
 
     // --- Nettoyage Final ---
     printf("Fermeture du programme.\n");
-    free(murs_reels);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     IMG_Quit();
