@@ -4,8 +4,8 @@ SRC = laby.c labySDL.c jeu.c structures.c main_app.c audio.c drawing.c endscreen
 EXE := exec
 
 CC := gcc
-#CFLAGS := -Wall -Wextra -MMD -Og -g $(shell sdl2-config --cflags) -fsanitize=address,undefined
-CFLAGS:=-Wall -Wextra -MMD -O2 $(sdl2-config --cflags)  # pour la version release
+CFLAGS := -Wall -Wextra -MMD -Og -g $(shell sdl2-config --cflags) -fsanitize=address,undefined
+#CFLAGS:=-Wall -Wextra -MMD -O2 $(sdl2-config --cflags)  # pour la version release
 
 LDFLAGS := -fsanitize=address,undefined -lSDL2_image -lSDL2_mixer -lSDL2_ttf -lSDL2_gfx -lm $(shell sdl2-config --libs)
 

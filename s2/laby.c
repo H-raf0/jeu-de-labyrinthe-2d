@@ -102,6 +102,37 @@ void construire_arbre_couvrant(arete G[], int nb_aretes, arete *arbre, int* nb_a
     free_partition(&p);
 }
 
+
+void construire_arbre_imparfait(arete G[], int nb_aretes, arete *arbre, int* nb_arbre, int nb_cellules) {
+    partition p;
+    init_partition(&p, nb_cellules);
+    *nb_arbre = 0;
+
+    bool* est_dans_arbre = calloc(nb_aretes, sizeof(bool));
+
+    // J'ajoute dans "arbre" les murs à supprimer pour former une arbre parfaite
+    for (int i = 0; i < nb_aretes; i++) {
+        if (fusion(&p, G[i].u, G[i].v)) {
+            arbre[*nb_arbre] = G[i];
+            (*nb_arbre)++;
+            est_dans_arbre[i] = true;
+        }
+    }
+
+    // J'ajoute plus d'arrêt qui seront supprimé
+    for (int i = 0; i < nb_aretes; i++) {
+        if (!est_dans_arbre[i]) {
+            if (((float)(rand() % 100) / 100) < 0.3f) {
+                arbre[*nb_arbre] = G[i];
+                (*nb_arbre)++; 
+            }
+        }
+    }
+
+    free_partition(&p);
+    free(est_dans_arbre);
+}
+
 // Génère un fichier DOT pour visualisation de graphe
 void generer_dot(const char* nom, arete aretes[], int nb) {
     FILE* f = fopen(nom, "w");

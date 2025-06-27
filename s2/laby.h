@@ -29,6 +29,7 @@ int fusion(partition* p, int i, int j);
 void fisher_yates(arete G[], int n);
 int generation_grille_vide(arete **G_ptr, int lignes, int colonnes);
 void construire_arbre_couvrant(arete G[], int nb_aretes, arete *arbre, int* nb_arbre, int nb_cellules);
+void construire_arbre_imparfait(arete G[], int nb_aretes, arete *arbre, int* nb_arbre, int nb_cellules);
 void generer_dot(const char* nom, arete aretes[], int nb);
 
 //================== Manipulation de murs ====================

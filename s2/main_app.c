@@ -132,17 +132,26 @@ void show_main_menu(SDL_Renderer* renderer) {
                     int nb_total_aretes = generation_grille_vide(&toutes_aretes, lignes, colonnes);
                     fisher_yates(toutes_aretes, nb_total_aretes);
                     
-                    arete *arbre = malloc(sizeof(arete) * (nb_cellules - 1));
+                    //arete *arbre = malloc(sizeof(arete) * (nb_cellules - 1));
+                    arete *arbre = malloc(sizeof(arete) * nb_total_aretes);
+                    
                     int nb_aretes_arbre;
-                    construire_arbre_couvrant(toutes_aretes, nb_total_aretes, arbre, &nb_aretes_arbre, nb_cellules);
+                    /*  */
+                    // Kruskal 
+                    // Creation de l'arbre des arrêtes
+                    
+                    //construire_arbre_couvrant(toutes_aretes, nb_total_aretes, arbre, &nb_aretes_arbre, nb_cellules);
+                    construire_arbre_imparfait(toutes_aretes, nb_total_aretes, arbre, &nb_aretes_arbre, nb_cellules);
                     free(toutes_aretes);
                     
                     int *murs_reels = malloc(sizeof(int) * nb_cellules);
+                    // Initialiser les murs par tous
                     for (int i = 0; i < nb_cellules; i++) murs_reels[i] = 1 | 2 | 4 | 8;
+                    // Supprimer les murs
                     for (int i = 0; i < nb_aretes_arbre; i++) supprimer_mur(murs_reels, colonnes, arbre[i].u, arbre[i].v);
                     free(arbre);
 
-
+                    /*  */
                     start_game_music(&audio_data);
                     GameResult result = lancer_jeu(renderer, murs_reels, lignes, colonnes, &audio_data);
                     

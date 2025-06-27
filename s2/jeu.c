@@ -85,7 +85,7 @@ typedef struct {
     SDL_Texture * texture; // Les sprites de l'astronaute
     SDL_Texture* saut_indicateur_texture;
     float pixel_x, pixel_y; // Position D'AFFICHAGE en pixels 
-    
+
     float target_x, target_y; // Position cible en pixels
 
     bool is_moving; // Le personnage est-il en train de bouger entre deux cases ?
@@ -157,16 +157,12 @@ void apprendre_mur(Monstre * monstre, int u, int v, int colonnes) {
         monstre -> memoire_tete = (monstre -> memoire_tete + 1) % MEMOIRE_MAX;
         monstre -> memoire_taille_actuelle--;
     }
-    monstre -> memoire_murs[monstre -> memoire_queue] = (arete) {
-        u,
-        v
-    };
+    monstre -> memoire_murs[monstre -> memoire_queue] = (arete) {u, v};
     monstre -> memoire_queue = (monstre -> memoire_queue + 1) % MEMOIRE_MAX;
     monstre -> memoire_taille_actuelle++;
 }
 
-int gidc(Monstre * monstre, int * murs_reels, int lignes, int colonnes, int destination,
-    const int * penalite_map) {
+int gidc(Monstre * monstre, int * murs_reels, int lignes, int colonnes, int destination, const int * penalite_map) {
     int nb_cellules = lignes * colonnes;
     int depart = monstre -> pos;
     int ** graphe_connu = creer_matrice_couts_dynamiques(monstre -> murs_connus, penalite_map, lignes, colonnes);
@@ -220,8 +216,7 @@ int gidc(Monstre * monstre, int * murs_reels, int lignes, int colonnes, int dest
     }
 }
 
-int gidi(Monstre * monstre, int * murs_reels, int lignes, int colonnes,
-    const int * penalite_map) {
+int gidi(Monstre * monstre, int * murs_reels, int lignes, int colonnes,const int * penalite_map) {
     int nb_cellules = lignes * colonnes;
     monstre -> noeuds_visites_zone[monstre -> pos] = true;
     for (int k = 0; k < monstre -> frontier_size; k++) {
