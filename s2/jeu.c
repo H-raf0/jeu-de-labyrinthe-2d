@@ -94,6 +94,7 @@ typedef struct {
 
     // --- Logique d'affichage et d'animation ---
     SDL_Texture * texture; // Le spritesheet de l'astronaute
+    SDL_Texture* saut_indicateur_texture;
     float pixel_x, pixel_y; // Position D'AFFICHAGE en pixels (le centre du sprite)
     float target_x, target_y; // Position cible en pixels
 
@@ -104,9 +105,41 @@ typedef struct {
 }
 Joueur;
 
-// Les fonctions de logique des monstres (melanger_voisins, apprendre_mur, gidc, gidi, mettre_a_jour_monstre)
-// restent exactement les mêmes. Vous pouvez les copier/coller ici.
-// ...
+SDL_Texture* creer_texture_cercle(SDL_Renderer* renderer, int radius, SDL_Color color) {
+    // Le diamètre sera la taille de notre texture
+    int diameter = radius * 2;
+    SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, 
+                                             SDL_TEXTUREACCESS_TARGET, diameter, diameter);
+    if (!texture) {
+        printf("Erreur création texture cercle: %s\n", SDL_GetError());
+        return NULL;
+    }
+
+    // Activer la transparence pour le fond du cercle
+    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+    
+    // On dessine sur notre nouvelle texture
+    SDL_SetRenderTarget(renderer, texture);
+    
+    // On met le fond en transparent
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+    SDL_RenderClear(renderer);
+
+    // On dessine le cercle au centre de la texture
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+    for (int y = -radius; y <= radius; y++) {
+        for (int x = -radius; x <= radius; x++) {
+            if (x * x + y * y <= radius * radius) {
+                SDL_RenderDrawPoint(renderer, radius + x, radius + y);
+            }
+        }
+    }
+
+    // On arrête de dessiner sur la texture et on retourne au renderer principal
+    SDL_SetRenderTarget(renderer, NULL);
+    
+    return texture;
+}
 
 void melanger_voisins(int * tableau, int n) {
     if (n > 1) {
@@ -552,6 +585,10 @@ GameResult lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colo
     joueur.pixel_y = g_config.offset_y + (joueur.pos / colonnes + 0.5f) * g_config.cell_size;
     joueur.target_x = joueur.pixel_x;
     joueur.target_y = joueur.pixel_y;
+    SDL_Color couleur_saut_pret = {255, 255, 255, 255}; 
+    // Le rayon est proportionnel à la taille d'une cellule
+    int indicateur_radius = g_config.cell_size / 8; 
+    joueur.saut_indicateur_texture = creer_texture_cercle(rendu, indicateur_radius, couleur_saut_pret);
 
     Monstre monstres[NOMBRE_MONSTRES];
     for (int i = 0; i < NOMBRE_MONSTRES; i++) {
@@ -778,13 +815,16 @@ GameResult lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colo
                 free(monstres[i].noeuds_visites_zone);
                 free(monstres[i].frontier_nodes);
             }
+            if (joueur.saut_indicateur_texture) {
+                SDL_DestroyTexture(joueur.saut_indicateur_texture);
+            }
             SDL_DestroyTexture(perso_texture);
             SDL_DestroyTexture(piece_texture);
             SDL_DestroyTexture(monstre_textures[DOWN]);
             SDL_DestroyTexture(monstre_textures[RIGHT]);
             SDL_DestroyTexture(monstre_textures[UP]);
             
-            return GAME_WON; // NOUVEAU : On retourne l'état de victoire
+            return GAME_WON; // On retourne l'état de victoire
         }
         for (int i = 0; i < NOMBRE_MONSTRES; i++) {
             mettre_a_jour_monstre(monstres, i, joueur.pos, murs_reels, lignes, colonnes);
@@ -801,6 +841,9 @@ GameResult lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colo
                     free(monstres[i].memoire_murs);
                     free(monstres[i].noeuds_visites_zone);
                     free(monstres[i].frontier_nodes);
+                }
+                if (joueur.saut_indicateur_texture) {
+                SDL_DestroyTexture(joueur.saut_indicateur_texture);
                 }
                 SDL_DestroyTexture(perso_texture);
                 SDL_DestroyTexture(piece_texture);
@@ -834,6 +877,37 @@ GameResult lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colo
             }
         }
 
+        //SDL_SetRenderDrawBlendMode(rendu, SDL_BLENDMODE_BLEND);
+
+        if (joueur.saut_indicateur_texture) {
+            // Si le saut est disponible
+            if (joueur.saut_cooldown == 0) {
+                // On met l'indicateur en vert et bien visible
+                SDL_SetTextureColorMod(joueur.saut_indicateur_texture, 0, 255, 100);
+                SDL_SetTextureAlphaMod(joueur.saut_indicateur_texture, 200); 
+            } else { // Si le saut est en cooldown
+                // On met l'indicateur en rouge et plus transparent
+                SDL_SetTextureColorMod(joueur.saut_indicateur_texture, 255, 50, 50);
+                // On fait varier l'alpha pour un effet "recharge"
+                Uint8 alpha = 50 + (Uint8)(150.0f * (SAUT_COOLDOWN - joueur.saut_cooldown) / SAUT_COOLDOWN);
+                SDL_SetTextureAlphaMod(joueur.saut_indicateur_texture, alpha);
+            }
+
+            // On dessine la texture de l'indicateur sous les pieds du joueur
+            int w, h;
+            SDL_QueryTexture(joueur.saut_indicateur_texture, NULL, NULL, &w, &h);
+
+            int indicateur_y_offset = g_config.cell_size*2/3;
+
+            SDL_Rect indicateur_dst = {
+                (int)(joueur.pixel_x - w / 2),
+                (int)(joueur.pixel_y - h / 2 + indicateur_y_offset),
+                w,
+                h
+            };
+            SDL_RenderCopy(rendu, joueur.saut_indicateur_texture, NULL, &indicateur_dst);
+        }
+
         dessiner_joueur_anime(rendu, &joueur);
         for (int i = 0; i < NOMBRE_MONSTRES; i++) {
             Monstre* m = &monstres[i];
@@ -856,6 +930,9 @@ GameResult lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colo
         free(monstres[i].memoire_murs);
         free(monstres[i].noeuds_visites_zone);
         free(monstres[i].frontier_nodes);
+    }
+    if (joueur.saut_indicateur_texture) {
+        SDL_DestroyTexture(joueur.saut_indicateur_texture);
     }
     SDL_DestroyTexture(perso_texture);
     SDL_DestroyTexture(piece_texture);

@@ -17,7 +17,7 @@ int LABY_WI = 30;
 
 
 // La signature de la fonction ne change pas, car elle utilisera g_config
-void show_main_menu(SDL_Window* window, SDL_Renderer* renderer) {
+void show_main_menu(SDL_Renderer* renderer) {
     // --- Chargement des ressources du menu ---
     AudioData audio_data;
     load_sounds(&audio_data);
@@ -87,7 +87,7 @@ void show_main_menu(SDL_Window* window, SDL_Renderer* renderer) {
                             MONSTRE_PENALITE_RAYON = 4;
                             MONSTRE_PENALITE_COUT = 20;
 
-                            SAUT_COOLDOWN = 10; // Cooldown en frames
+                            SAUT_COOLDOWN = 60; // Cooldown en frames
 
                             NOMBRE_PIECES = 1;
                             break;
@@ -103,7 +103,7 @@ void show_main_menu(SDL_Window* window, SDL_Renderer* renderer) {
                             MONSTRE_PENALITE_RAYON = 4;
                             MONSTRE_PENALITE_COUT = 20;
 
-                            SAUT_COOLDOWN = 100; // Cooldown en frames
+                            SAUT_COOLDOWN = 300; // Cooldown en frames
 
                             NOMBRE_PIECES = 2;
                             break;
@@ -119,7 +119,7 @@ void show_main_menu(SDL_Window* window, SDL_Renderer* renderer) {
                             MONSTRE_PENALITE_RAYON = 5;
                             MONSTRE_PENALITE_COUT = 25;
 
-                            SAUT_COOLDOWN = 500; // Cooldown en frames
+                            SAUT_COOLDOWN = 600; // Cooldown en frames
 
                             NOMBRE_PIECES = 3;
                             break;
@@ -268,7 +268,7 @@ int main(int argc, char* argv[]) {
 
     // --- Lancement du Menu ---
     // La fenêtre est déjà en plein écran, et g_config est prête
-    show_main_menu(window, renderer);
+    show_main_menu(renderer);
 
     // --- Nettoyage Final ---
     printf("Fermeture du programme.\n");
