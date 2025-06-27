@@ -2,11 +2,9 @@
 #include <string.h>
 #include <math.h>
 
-// Définition de PI si non présent dans math.h
+
 #define M_PI 3.14159265358979323846
 
-
-// --- Fonctions internes (non déclarées dans le .h) ---
 
 void draw_power_icon(SDL_Renderer* renderer, SDL_Rect* button_rect, SDL_Color color) {
     SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
@@ -65,7 +63,6 @@ void draw_difficulty_control(SDL_Renderer* renderer, SDL_Rect* rect, DifficultyL
     }
 }
 
-// --- Fonctions publiques (déclarées dans le .h) ---
 
 void init_parallax(SDL_Renderer* renderer, ParallaxBackground* bg, int window_w) {
     for (int i = 0; i < NUM_LAYERS; i++) {

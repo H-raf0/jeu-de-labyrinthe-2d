@@ -1,27 +1,27 @@
 #include "endscreen.h"
-#include <SDL2/SDL_image.h> // On utilise SDL_image pour être cohérent avec le reste du projet
+#include <SDL2/SDL_image.h> 
 
 #define END_SCREEN_SCALE_FACTOR 0.8f
 
 
 // Fonction privée pour l'effet de fondu (prise de votre exemple)
 static void fadeIn(SDL_Renderer *renderer, SDL_Texture *texture) {
-    // 1. Obtenir les dimensions de l'écran
+    // Obtenir les dimensions de l'écran
     int screen_w, screen_h;
     SDL_GetRendererOutputSize(renderer, &screen_w, &screen_h);
 
-    // 2. Obtenir les dimensions originales de la texture pour garder le bon ratio
+    // Obtenir les dimensions originales de la texture pour garder le bon ratio
     int tex_w, tex_h;
     SDL_QueryTexture(texture, NULL, NULL, &tex_w, &tex_h);
 
-    // 3. Calculer les nouvelles dimensions de l'image
+    // Calculer les nouvelles dimensions de l'image
     // La nouvelle largeur est un pourcentage de la largeur de l'écran
     int new_w = screen_w * END_SCREEN_SCALE_FACTOR;
     // La nouvelle hauteur est calculée proportionnellement pour ne pas déformer l'image
     // On fait le calcul en float pour la précision
     int new_h = new_w * ((float)tex_h / (float)tex_w);
 
-    // 4. Créer le rectangle de destination, CENTRÉ sur l'écran
+    // Créer le rectangle de destination, CENTRÉ sur l'écran
     SDL_Rect dst = {
         .x = (screen_w - new_w) / 2,
         .y = (screen_h - new_h) / 2,

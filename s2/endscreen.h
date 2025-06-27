@@ -10,9 +10,6 @@ typedef enum {
     GAME_QUIT_MANUALLY
 } GameResult;
 
-// Affiche un écran de fin avec une image en fondu
-// renderer: le rendu de la fenêtre principale
-// image_path: le chemin vers l'image à afficher (ex: "gameover.png")
 void show_end_screen(SDL_Renderer* renderer, const char* image_path);
 
 #endif // ENDSCREEN_H

@@ -12,7 +12,7 @@ typedef struct {
     int u, v;
 } arete;
 
-// Structure pour les partitions (Union-Find)
+// Structure pour les partitions
 typedef struct {
     int taille;
     int *parent;
@@ -44,14 +44,6 @@ int** creer_matrice_couts_dynamiques(int* murs_connus, const int* penalite_map, 
 int** creer_matrice_couts_connus(int* murs_connus, int* passages_counts, int lignes, int colonnes);
 void liberer_matrice_adjacence(int** matrice, int nb_cellules);
 
-//================== BFS/DIj/A* ==============================
-
-/*
-// à supprimer ???
-void BFS(int m_adj[N][N], int origine,noeud* n);
-void dijkstra(int graphe[N][N], int origine, noeud *n);
-void A_etoile(int graphe[N][N], int depart, int arrivee, int positions[N][2]); //?????
-*/
 
 //================== Résolution de labyrinthe ====================
 void BFS_laby(int *murs, int lignes, int colonnes, int origine, noeud* n);

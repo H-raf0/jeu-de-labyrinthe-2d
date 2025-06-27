@@ -83,7 +83,7 @@ void afficher_labyrinthe_sdl(arete arbre[], int nb_aretes, int lignes, int colon
         return;
     }
 
-    // --- Début du calcul de la configuration de rendu locale ---
+    // calcul de la configuration de rendu locale
     RenderConfig local_config;
     SDL_DisplayMode dm;
     if (SDL_GetDesktopDisplayMode(0, &dm) != 0) {
@@ -122,7 +122,6 @@ void afficher_labyrinthe_sdl(arete arbre[], int nb_aretes, int lignes, int colon
     local_config.wall_thickness = (local_config.cell_size / 16.0f > 1) ? (int)(local_config.cell_size / 16.0f) : 1;
     local_config.offset_x = (local_config.window_w - (colonnes * local_config.cell_size)) / 2;
     local_config.offset_y = (local_config.window_h - (lignes * local_config.cell_size)) / 2;
-    // --- Fin du calcul de la configuration ---
 
     // Préparation de la structure de murs du labyrinthe
     int total = lignes * colonnes;
@@ -141,8 +140,7 @@ void afficher_labyrinthe_sdl(arete arbre[], int nb_aretes, int lignes, int colon
     SDL_SetRenderDrawColor(rendu, 0, 0, 0, 255); // Couleur de fond (noir)
     SDL_RenderClear(rendu);
     
-    // Assigner la configuration locale à la variable globale pour que
-    // la fonction `dessiner_murs_connus` puisse l'utiliser.
+    // Assigner la configuration locale à la variable globale pour que la fonction dessiner_murs_connus puisse l'utiliser.
     g_config = local_config;
 
     for (int y = 0; y < lignes; y++) {
@@ -202,7 +200,6 @@ void dessiner_tuile(SDL_Renderer* rendu, SDL_Texture* tileset, int* murs, int x,
     int val_murs = murs[y * colonnes + x];
     SDL_Rect src = src_murs[val_murs];
 
-    // Utiliser la configuration globale pour la destination
     dst.x = g_config.offset_x + x * g_config.cell_size;
     dst.y = g_config.offset_y + y * g_config.cell_size;
     dst.w = g_config.cell_size;
@@ -213,13 +210,23 @@ void dessiner_tuile(SDL_Renderer* rendu, SDL_Texture* tileset, int* murs, int x,
 
 
 void dessiner_tuile_v2(SDL_Renderer* rendu, SDL_Texture* tileset, int x, int y){
-    SDL_Rect dst; // Le rectangle de destination SUR l'écran
-    int p_extra = 0; // Gardons cette variable si vous voulez l'utiliser plus tard
+    SDL_Rect dst;
+    int p_extra = 0; // Proportion du dimensions supprimé de la tuile dans la cellue
     
-    // Définition du rectangle source pour la tuile de sol
-    SDL_Rect src_sol = {2 * TUILE_TAILLE, 2 * TUILE_TAILLE, TUILE_TAILLE, TUILE_TAILLE};
+    // Définition des rectangles source pour les tuiles de sol
+    SDL_Rect src_sol;
+    SDL_Rect src_sol1 = {2 * TUILE_TAILLE, 2 * TUILE_TAILLE, TUILE_TAILLE, TUILE_TAILLE};
+    SDL_Rect src_sol2 = {2 * TUILE_TAILLE, 1 * TUILE_TAILLE, TUILE_TAILLE, TUILE_TAILLE};
+    SDL_Rect src_sol3 = {1 * TUILE_TAILLE, 2 * TUILE_TAILLE, TUILE_TAILLE, TUILE_TAILLE};
+    int p = (x * 19 + y * 73) % 101;
+    if(p <= 70){
+        src_sol = src_sol1;
+    }else if (p<=78){
+        src_sol = src_sol2;
+    }else{
+        src_sol = src_sol3;
+    }
 
-    // On définit où dessiner la tuile en utilisant g_config
     dst.x = g_config.offset_x + x * g_config.cell_size + p_extra;
     dst.y = g_config.offset_y + y * g_config.cell_size + p_extra;
     dst.w = g_config.cell_size - p_extra;
@@ -230,7 +237,6 @@ void dessiner_tuile_v2(SDL_Renderer* rendu, SDL_Texture* tileset, int x, int y){
 
 
 void dessiner_bg(SDL_Renderer* rendu, int lignes, int colonnes) {
-    // Charger l'image comme surface
     SDL_Surface* tileset_surface = IMG_Load("tileset2.png");
     if (!tileset_surface) {
         fprintf(stderr, "Erreur chargement tileset2.png : %s\n", IMG_GetError());
@@ -247,11 +253,6 @@ void dessiner_bg(SDL_Renderer* rendu, int lignes, int colonnes) {
 
     SDL_FreeSurface(tileset_surface);
 
-    // Fond bleu foncé
-    //SDL_SetRenderDrawColor(rendu, 11, 14, 42, 255);
-    //SDL_RenderClear(rendu);
-
-    // Boucle pour dessiner chaque tuile
     for (int y = 0; y < lignes; y++) {
         for (int x = 0; x < colonnes; x++) {
             dessiner_tuile_v2(rendu, tileset, x, y);
@@ -281,7 +282,6 @@ void dessiner_rayon_detection(SDL_Renderer* rendu, int centre_pos, int rayon, in
             if (x >= 0 && x < colonnes && y >= 0 && y < lignes) {
                 int dist = abs(x - cx) + abs(y - cy);
                 if (dist <= rayon) {
-                    // Utilisation de g_config pour le positionnement et la taille
                     SDL_Rect case_rect = {
                         g_config.offset_x + x * g_config.cell_size, 
                         g_config.offset_y + y * g_config.cell_size, 
@@ -306,6 +306,7 @@ void dessiner_rayon_detection(SDL_Renderer* rendu, int centre_pos, int rayon, in
 
 
 // Affiche le labyrinthe avec des tuiles en plein écran et de manière proportionnelle
+// old?
 void afficher_labyrinthe_sdl_tuiles(int *murs, int lignes, int colonnes) {
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         fprintf(stderr, "Erreur SDL: %s\n", SDL_GetError());
@@ -348,11 +349,9 @@ void afficher_labyrinthe_sdl_tuiles(int *murs, int lignes, int colonnes) {
     int cell_w = local_config.window_w / colonnes;
     int cell_h = local_config.window_h / lignes;
     local_config.cell_size = (cell_w < cell_h) ? cell_w : cell_h;
-    // wall_thickness n'est pas utilisé par dessiner_tuile, mais on le calcule par cohérence
     local_config.wall_thickness = (local_config.cell_size / 16.0f > 1) ? (int)(local_config.cell_size / 16.0f) : 1;
     local_config.offset_x = (local_config.window_w - (colonnes * local_config.cell_size)) / 2;
     local_config.offset_y = (local_config.window_h - (lignes * local_config.cell_size)) / 2;
-    // --- Fin du calcul de la configuration ---
 
     // Chargement de la texture du tileset
     SDL_Surface* tileset_surface = IMG_Load("tileset.png");
@@ -377,8 +376,6 @@ void afficher_labyrinthe_sdl_tuiles(int *murs, int lignes, int colonnes) {
     SDL_SetRenderDrawColor(rendu, 0, 0, 0, 255);
     SDL_RenderClear(rendu);
 
-    // Assigner la configuration locale à la variable globale pour que
-    // la fonction `dessiner_tuile` puisse l'utiliser.
     g_config = local_config;
 
     for (int y = 0; y < lignes ; y++) {
@@ -419,7 +416,7 @@ void afficher_labyrinthe_resolu_sdl(int *murs, int lignes, int colonnes, int dep
         return;
     }
 
-    // --- Début du calcul de la configuration locale ---
+
     RenderConfig local_config;
     SDL_DisplayMode dm;
     if (SDL_GetDesktopDisplayMode(0, &dm) != 0) {
@@ -439,13 +436,12 @@ void afficher_labyrinthe_resolu_sdl(int *murs, int lignes, int colonnes, int dep
     local_config.wall_thickness = (local_config.cell_size / 16.0f > 1) ? (int)(local_config.cell_size / 16.0f) : 1;
     local_config.offset_x = (local_config.window_w - (colonnes * local_config.cell_size)) / 2;
     local_config.offset_y = (local_config.window_h - (lignes * local_config.cell_size)) / 2;
-    // --- Fin du calcul de la configuration locale ---
+
 
     noeud n;
     int nb_cellules = lignes * colonnes;
     BFS_laby(murs, lignes, colonnes, destination, &n);
 
-    // ... (le calcul de max_dist ne change pas) ...
     int max_dist = 0;
     for (int i = 0; i < nb_cellules; i++) {
         if (n.distance[i] > max_dist && n.distance[i] != INF) max_dist = n.distance[i];
@@ -456,7 +452,7 @@ void afficher_labyrinthe_resolu_sdl(int *murs, int lignes, int colonnes, int dep
     SDL_SetRenderDrawColor(rendu, 0, 0, 0, 255);
     SDL_RenderClear(rendu);
 
-    // 2. Dessiner le dégradé de couleurs
+    // Dessiner le dégradé de couleurs
     for (int y = 0; y < lignes; y++) {
         for (int x = 0; x < colonnes; x++) {
             int i = y * colonnes + x;
@@ -476,7 +472,7 @@ void afficher_labyrinthe_resolu_sdl(int *murs, int lignes, int colonnes, int dep
         }
     }
 
-    // 3. Dessiner le chemin
+    // Dessiner le chemin
     if (n.distance[depart] != INF) {
         SDL_SetRenderDrawColor(rendu, 255, 255, 0, 255);
         int courant = depart;
@@ -488,14 +484,13 @@ void afficher_labyrinthe_resolu_sdl(int *murs, int lignes, int colonnes, int dep
             indice_vers_coord(courant, colonnes, &x1, &y1);
             indice_vers_coord(parent, colonnes, &x2, &y2);
             
-            // Calculer les centres en utilisant la configuration locale
+            // Calculer les centres
             int centre_x1 = local_config.offset_x + x1 * local_config.cell_size + local_config.cell_size / 2;
             int centre_y1 = local_config.offset_y + y1 * local_config.cell_size + local_config.cell_size / 2;
             int centre_x2 = local_config.offset_x + x2 * local_config.cell_size + local_config.cell_size / 2;
             int centre_y2 = local_config.offset_y + y2 * local_config.cell_size + local_config.cell_size / 2;
             
-            // Pour une ligne plus épaisse, on peut utiliser SDL_RenderDrawLine plusieurs fois
-            // ou utiliser une bibliothèque comme SDL2_gfx
+
             SDL_RenderDrawLine(rendu, centre_x1, centre_y1, centre_x2, centre_y2);
             SDL_RenderDrawLine(rendu, centre_x1-1, centre_y1, centre_x2-1, centre_y2);
             SDL_RenderDrawLine(rendu, centre_x1+1, centre_y1, centre_x2+1, centre_y2);
@@ -503,8 +498,8 @@ void afficher_labyrinthe_resolu_sdl(int *murs, int lignes, int colonnes, int dep
         }
     }
     
-    // 4. Dessiner les murs (qui appelle `dessiner_murs_connus` qui utilisera le g_config global, il faut le définir temporairement)
-    g_config = local_config; // Assigner la config locale à la globale pour que dessiner_murs_connus fonctionne
+    // Dessiner les murs 
+    g_config = local_config; 
     for (int y = 0; y < lignes; y++) {
         for (int x = 0; x < colonnes; x++) {
             dessiner_murs_connus(rendu, x, y, murs, colonnes);
@@ -513,7 +508,6 @@ void afficher_labyrinthe_resolu_sdl(int *murs, int lignes, int colonnes, int dep
 
     SDL_RenderPresent(rendu);
     
-    // ... (boucle d'événements et libération mémoire) ...
     SDL_Event e;
     int quitter = 0;
     while (!quitter) {
@@ -542,7 +536,7 @@ void dessiner_fond(SDL_Renderer* rendu, noeud* n, int lignes, int colonnes) {
             float ratio = (float)n->distance[i] / max_dist;
             Uint8 r = 255 * ratio;
             Uint8 b = 255 * (1.0f - ratio);
-            // Utilisation de g_config pour le positionnement et la taille
+            
             SDL_Rect case_rect = {
                 g_config.offset_x + (i % colonnes) * g_config.cell_size, 
                 g_config.offset_y + (i / colonnes) * g_config.cell_size, 
@@ -556,12 +550,12 @@ void dessiner_fond(SDL_Renderer* rendu, noeud* n, int lignes, int colonnes) {
 }
 
 
-// Dessine le plus court chemin en surbrillance
+
 void dessiner_chemin(SDL_Renderer* rendu, int* chemin, int nb_etapes, int colonnes) {
     SDL_SetRenderDrawColor(rendu, 255, 255, 0, 100); // Jaune semi-transparent
     for (int i = 0; i < nb_etapes; i++) {
         int cell = chemin[i];
-        // Utilisation de g_config pour le positionnement et la taille
+        
         SDL_Rect case_rect = {
             g_config.offset_x + (cell % colonnes) * g_config.cell_size,
             g_config.offset_y + (cell / colonnes) * g_config.cell_size,
@@ -573,7 +567,6 @@ void dessiner_chemin(SDL_Renderer* rendu, int* chemin, int nb_etapes, int colonn
 }
 
 void dessiner_marqueurs(SDL_Renderer* rendu, int depart, int destination, int colonnes) {
-    // Utiliser la config pour calculer les positions et tailles
     // Départ en vert
     SDL_Rect depart_rect = {
         g_config.offset_x + (depart % colonnes) * g_config.cell_size,
@@ -615,14 +608,14 @@ void dessiner_heatmap_passage(SDL_Renderer* rendu, int* passages, int lignes, in
             float ratio = (float)passages[i] / max_passages;
             Uint8 alpha = (Uint8)(ratio * 200);
             
-            // Utilisation de g_config pour le positionnement et la taille
+            
             SDL_Rect case_rect = {
                 g_config.offset_x + (i % colonnes) * g_config.cell_size,
                 g_config.offset_y + (i / colonnes) * g_config.cell_size,
                 g_config.cell_size,
                 g_config.cell_size
             };
-            SDL_SetRenderDrawColor(rendu, 255, 100, 0, alpha); // Orange/Rouge
+            SDL_SetRenderDrawColor(rendu, 255, 100, 0, alpha);
             SDL_RenderFillRect(rendu, &case_rect);
         }
     }

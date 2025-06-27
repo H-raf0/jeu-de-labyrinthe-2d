@@ -1,19 +1,12 @@
-// NOUVEAU : Ajout de math.h pour la fonction sqrt() utilisée dans le déplacement
 #include <math.h>
-
 #include <stdio.h>
-
 #include <stdlib.h>
-
 #include <time.h>
-
 #include <string.h>
-
 #include <stdbool.h>
-
 #include "jeu.h"
 
-// --- Définitions pour le mode de jeu à 2 ÉTATS ---
+// Définitions pour le mode de jeu à 2 ÉTATS
 #define AI_MODE_SEARCH_ZONE 0
 #define AI_MODE_HUNT 1
 
@@ -34,20 +27,20 @@ int NOMBRE_PIECES = 3;
 
 
 
-// NOUVEAU : Constantes pour l'animation de l'astronaute
+
 #define ASTRO_FRAME_WIDTH 16
 #define ASTRO_FRAME_HEIGHT 16
 #define ASTRO_FRAME_COUNT 6
 
-#define VITESSE_DEPLACEMENT 4.0f // Vitesse du joueur en pixels par frame. Ajustez si besoin.
+#define VITESSE_DEPLACEMENT 4.0f // Vitesse du joueur en pixels par frame
 
 
 
 #define MONSTRE_ANIM_FRAMES 6
-#define VITESSE_MONSTRE_PIXELS 4.0f // Vitesse d'animation des monstres en pixels/frame.
+#define VITESSE_MONSTRE_PIXELS 4.0f // Vitesse d'animation des monstres en pixels/frame
 #define MONSTRE_ZOOM_FACTOR 1.5f
 
-// NOUVEAU : Énumération pour la direction de l'animation
+// Énumération pour la direction de l'animation
 typedef enum {
     IDLE,
     DOWN,
@@ -57,9 +50,8 @@ typedef enum {
 }
 AnimDirection;
 
-// La structure Monstre reste inchangée
+
 typedef struct {
-    // --- Logique IA (inchangée) ---
     int pos;
     int mode;
     int * murs_connus;
@@ -71,42 +63,38 @@ typedef struct {
     int frontier_size;
     int drnier_pos_jr_connu;
     int rapp_cooldown;
-    int move_cooldown; // Cooldown de l'IA (décision)
+    int move_cooldown; // Cooldown de moement des monstre 
 
-    // NOUVEAU : Champs pour l'animation
     float pixel_x, pixel_y; // Position d'affichage en pixels
     float target_x, target_y; // Position cible en pixels
 
-    bool is_moving; // Est-il en train de bouger entre deux cases ?
-    AnimDirection anim_dir; // Direction de l'animation (on réutilise l'enum du joueur)
+    bool is_moving; // est-il en train de bouger entre deux cases ?
+    AnimDirection anim_dir; // Direction de l'animation
     int anim_frame; // Frame actuelle de l'animation
-    Uint32 last_frame_time; // Pour cadencer l'animation
+    Uint32 last_frame_time; // temps du dernier frame
 
 }
 Monstre;
 
-// MODIFIÉ : La structure Joueur est entièrement remplacée pour gérer l'animation
+
 typedef struct {
-    // --- Logique du jeu ---
     int pos; // Position logique (index de la case)
     int direction; // Direction logique (1:Haut, 2:Droite, 4:Bas, 8:Gauche) pour le saut
     int saut_cooldown; // Cooldown pour le saut
 
-    // --- Logique d'affichage et d'animation ---
-    SDL_Texture * texture; // Le spritesheet de l'astronaute
+    SDL_Texture * texture; // Les sprites de l'astronaute
     SDL_Texture* saut_indicateur_texture;
     float pixel_x, pixel_y; // Position D'AFFICHAGE en pixels (le centre du sprite)
     float target_x, target_y; // Position cible en pixels
 
     bool is_moving; // Le personnage est-il en train de bouger entre deux cases ?
     AnimDirection anim_dir; // Direction de l'animation
-    int anim_frame; // Frame actuelle de l'animation (0-5)
-    Uint32 last_frame_time; // Pour cadencer l'animation
+    int anim_frame; // Frame actuelle 
+    Uint32 last_frame_time; 
 }
 Joueur;
 
 SDL_Texture* creer_texture_cercle(SDL_Renderer* renderer, int radius, SDL_Color color) {
-    // Le diamètre sera la taille de notre texture
     int diameter = radius * 2;
     SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, 
                                              SDL_TEXTUREACCESS_TARGET, diameter, diameter);
@@ -333,28 +321,25 @@ void dessiner_monstre_anime(SDL_Renderer* rendu, Monstre* monstre, SDL_Texture* 
     // Choisir la bonne texture dans le tableau en fonction de la direction
     SDL_Texture* current_texture = textures[monstre->anim_dir];
 
-    if (current_texture == NULL) return; // Sécurité si une texture n'a pas été chargée
+    if (current_texture == NULL) return;
     
-    // Obtenir la taille d'une seule frame de cette texture
     int texture_w, texture_h;
     SDL_QueryTexture(current_texture, NULL, NULL, &texture_w, &texture_h);
     int frame_w = texture_w / MONSTRE_ANIM_FRAMES;
     int frame_h = texture_h;
 
-    // Découper la bonne frame dans la texture
+
     SDL_Rect src = {
         .x = monstre->anim_frame * frame_w,
-        .y = 0, // Chaque animation est sur sa propre ligne de sprite
+        .y = 0,
         .w = frame_w,
         .h = frame_h
     };
 
-    // NOUVEAU : Calculer la nouvelle taille du monstre avec le zoom
+    // Zoom
     int zoomed_w = g_config.cell_size * MONSTRE_ZOOM_FACTOR;
     int zoomed_h = g_config.cell_size * MONSTRE_ZOOM_FACTOR;
 
-    // Le rectangle de destination est basé sur les pixels du monstre
-    // MODIFIÉ : On utilise la nouvelle taille et on ajuste x/y pour que le sprite reste centré
     SDL_Rect dst = {
         .x = (int)(monstre->pixel_x - zoomed_w / 2), // Centre le sprite zoomé horizontalement
         .y = (int)(monstre->pixel_y - zoomed_h / 2), // Centre le sprite zoomé verticalement
@@ -362,7 +347,7 @@ void dessiner_monstre_anime(SDL_Renderer* rendu, Monstre* monstre, SDL_Texture* 
         .h = zoomed_h
     };
     
-    // Retourner l'image si le monstre va à gauche (inchangé)
+    // Retourner l'image si le monstre va à gauche
     SDL_RendererFlip flip = SDL_FLIP_NONE;
     if (monstre->anim_dir == LEFT) {
         flip = SDL_FLIP_HORIZONTAL;
@@ -379,7 +364,7 @@ void mettre_a_jour_monstre(Monstre * monstres, int monstre_index, int joueur_pos
         return;
     }
 
-    // --- Début de la logique IA (inchangée) ---
+
     int nb_cellules = lignes * colonnes;
     int j_x, j_y, m_x, m_y;
     indice_vers_coord(joueur_pos, colonnes, &j_x, &j_y);
@@ -455,39 +440,37 @@ void mettre_a_jour_monstre(Monstre * monstres, int monstre_index, int joueur_pos
     }
     free(penalite_map);
 
-    // --- CORRECTION PRINCIPALE ICI ---
 
-    // 1. D'abord, on sauvegarde la position ACTUELLE du monstre
+
+
     int ancienne_pos = monstre->pos;
 
-    // 2. Si l'IA a décidé de bouger, on lance l'animation
+    // Si l'IA a décidé de bouger, on lance l'animation
     if (prochaine_position_planifiee != ancienne_pos) {
         monstre->is_moving = true;
         
-        // 3. ON MET À JOUR LA POSITION LOGIQUE ICI, JUSTE AVANT DE BOUGER
+        
         monstre->pos = prochaine_position_planifiee;
         
-        // 4. Déterminer la direction de l'animation en comparant la nouvelle et l'ancienne position
+        // Déterminer la direction de l'animation en comparant la nouvelle et l'ancienne position
         int diff = monstre->pos - ancienne_pos;
         if (diff == -colonnes) monstre->anim_dir = UP;
         else if (diff == colonnes) monstre->anim_dir = DOWN;
         else if (diff == -1) monstre->anim_dir = LEFT;
         else if (diff == 1) monstre->anim_dir = RIGHT;
-        // (Sécurité: si le mouvement est invalide/diagonal, l'animation ne se lancera pas correctement,
-        // mais la logique de base est correcte)
         
-        // 5. Définir la cible en pixels
+        
+        // Définir la cible en pixels
         monstre->target_x = g_config.offset_x + (monstre->pos % colonnes + 0.5f) * g_config.cell_size;
         monstre->target_y = g_config.offset_y + (monstre->pos / colonnes + 0.5f) * g_config.cell_size;
     }
 }
-// NOUVEAU : Fonction dédiée pour dessiner le joueur animé
+
 void dessiner_joueur_anime(SDL_Renderer * rendu, Joueur * joueur) {
     int row;
     SDL_RendererFlip flip = SDL_FLIP_NONE;
 
-    // Choisir la ligne du spritesheet en fonction de la direction de l'animation
-    // ou de l'état (en mouvement ou non)
+    // Choisir la ligne du spritesheet en fonction de la direction de l'animation et le mouvement
     if (!joueur -> is_moving) {
         row = 1; // Ligne d'animation "idle"
     } else {
@@ -511,7 +494,7 @@ void dessiner_joueur_anime(SDL_Renderer * rendu, Joueur * joueur) {
         }
     }
 
-    // Le rectangle source qui découpe la bonne frame dans le spritesheet
+
     SDL_Rect src = {
         .x = joueur -> anim_frame * ASTRO_FRAME_WIDTH,
         .y = row * ASTRO_FRAME_HEIGHT,
@@ -519,7 +502,7 @@ void dessiner_joueur_anime(SDL_Renderer * rendu, Joueur * joueur) {
         .h = ASTRO_FRAME_HEIGHT
     };
 
-    // Le rectangle de destination, centré sur la position en pixels du joueur
+
     SDL_Rect dst = {
         .x = (int)(joueur -> pixel_x - g_config.cell_size / 2),
         .y = (int)(joueur -> pixel_y - g_config.cell_size / 2),
@@ -530,7 +513,7 @@ void dessiner_joueur_anime(SDL_Renderer * rendu, Joueur * joueur) {
     SDL_RenderCopyEx(rendu, joueur -> texture, & src, & dst, 0, NULL, flip);
 }
 
-// Fonction de jeu principale
+
 
 
 
@@ -539,7 +522,7 @@ void dessiner_joueur_anime(SDL_Renderer * rendu, Joueur * joueur) {
 GameResult lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colonnes, AudioData* audio){
     int nb_cellules = lignes * colonnes;
 
-    // --- Configuration de la fenêtre et du rendu (inchangé) ---
+
     SDL_DisplayMode dm;
     if (SDL_GetDesktopDisplayMode(0, &dm) != 0) {
         SDL_Log("SDL_GetDesktopDisplayMode failed: %s", SDL_GetError());
@@ -555,7 +538,7 @@ GameResult lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colo
     g_config.offset_x = (g_config.window_w - (colonnes * g_config.cell_size)) / 2;
     g_config.offset_y = (g_config.window_h - (lignes * g_config.cell_size)) / 2;
 
-    // --- Chargement des textures (inchangé) ---
+
     SDL_Texture* perso_texture = IMG_LoadTexture(rendu, "CosmicLilac_AnimatedSpriteSheet.png");
     SDL_Texture* piece_texture = IMG_LoadTexture(rendu, "o2.png");
     SDL_Texture* monstre_textures[5];
@@ -570,9 +553,8 @@ GameResult lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colo
         exit(-1);
     }
 
-    // --- Initialisation du Joueur et des Monstres (inchangé) ---
+
     Joueur joueur;
-    //... (code d'initialisation du joueur inchangé) ...
     joueur.pos = 0;
     joueur.direction = 4;
     joueur.saut_cooldown = 0;
@@ -592,7 +574,6 @@ GameResult lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colo
 
     Monstre monstres[NOMBRE_MONSTRES];
     for (int i = 0; i < NOMBRE_MONSTRES; i++) {
-        //... (code d'initialisation des monstres inchangé) ...
         Monstre* m = &monstres[i];
         m->pos = nb_cellules - 1 - i * 2 * (rand()%colonnes);
         m->mode = AI_MODE_SEARCH_ZONE;
@@ -618,10 +599,9 @@ GameResult lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colo
         m->target_y = m->pixel_y;
     }
 
-    // --- Initialisation des Pièces (inchangé) ---
+    // Initialisation des Pièces 
     int* pieces_pos = malloc(sizeof(int) * NOMBRE_PIECES);
     int pieces_collectees = 0;
-    // ... (code d'initialisation des pièces inchangé) ...
     for (int i = 0; i < NOMBRE_PIECES; i++) {
         int pos;
         bool position_valide;
@@ -665,7 +645,6 @@ GameResult lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colo
                         quitter = true;
                         break;
 
-                    // CORRECTION : Le code du saut a été restauré ici
                     case SDLK_SPACE:
                         if (!joueur.is_moving && joueur.saut_cooldown == 0) {
                             int pos_apres_saut = -1;
@@ -704,7 +683,6 @@ GameResult lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colo
             }
         }
 
-        // --- Le reste de la boucle de jeu est INCHANGÉ ---
 
         // Gestion du mouvement continu du joueur
         if (!joueur.is_moving) {
@@ -743,7 +721,7 @@ GameResult lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colo
             }
         }
 
-        // Mise à jour de la position du joueur...
+        // Mise à jour de la position du joueur
         if (joueur.is_moving) {
             float dx = joueur.target_x - joueur.pixel_x;
             float dy = joueur.target_y - joueur.pixel_y;
@@ -765,7 +743,7 @@ GameResult lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colo
             joueur.anim_frame = 0;
         }
 
-        // Mise à jour de la position des monstres...
+        // Mise à jour de la position des monstres
         for (int i = 0; i < NOMBRE_MONSTRES; i++) {
             Monstre* m = &monstres[i];
             if (m->is_moving) {
@@ -790,7 +768,7 @@ GameResult lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colo
             }
         }
 
-        // Logique de jeu (collecte, victoire, défaite)...
+        // (collecte, victoire, défaite)
         for (int i = 0; i < NOMBRE_PIECES; i++) {
             if (pieces_pos[i] != -1 && joueur.pos == pieces_pos[i]) {
                 pieces_pos[i] = -1;
@@ -804,9 +782,8 @@ GameResult lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colo
         if (pieces_collectees == NOMBRE_PIECES) {
             printf("VICTOIRE !\n");
 
-            Mix_HaltMusic(); // Arrête la musique de fond pour plus d'impact
+            Mix_HaltMusic(); // Arrête la musique de fond
             play_victory_sound(audio);
-            //SDL_Delay(1500); // Petite pause pour laisser le son se jouer
             
             free(pieces_pos);
             for (int i = 0; i < NOMBRE_MONSTRES; i++) {
@@ -831,9 +808,8 @@ GameResult lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colo
             if (monstres[i].pos == joueur.pos) {
                 printf("GAME OVER !\n");
                 
-                Mix_HaltMusic(); // Arrête la musique de fond pour plus d'impact
+                Mix_HaltMusic(); // Arrête la musique de fond
                 play_failure_sound(audio);
-                //SDL_Delay(1500); // Petite pause pour laisser le son se jouer
 
                 free(pieces_pos);
                 for (int i = 0; i < NOMBRE_MONSTRES; i++) {
@@ -854,7 +830,7 @@ GameResult lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colo
             }
         }
 
-        // Dessin...
+        // Dessin
         SDL_SetRenderDrawColor(rendu, 20, 0, 30, 255);
         SDL_RenderClear(rendu);
         dessiner_bg(rendu, lignes, colonnes);
@@ -882,11 +858,11 @@ GameResult lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colo
         if (joueur.saut_indicateur_texture) {
             // Si le saut est disponible
             if (joueur.saut_cooldown == 0) {
-                // On met l'indicateur en vert et bien visible
+                // On met l'indicateur en vert et visible
                 SDL_SetTextureColorMod(joueur.saut_indicateur_texture, 0, 255, 100);
                 SDL_SetTextureAlphaMod(joueur.saut_indicateur_texture, 200); 
             } else { // Si le saut est en cooldown
-                // On met l'indicateur en rouge et plus transparent
+                // On met l'indicateur en rouge et moins visible
                 SDL_SetTextureColorMod(joueur.saut_indicateur_texture, 255, 50, 50);
                 // On fait varier l'alpha pour un effet "recharge"
                 Uint8 alpha = 50 + (Uint8)(150.0f * (SAUT_COOLDOWN - joueur.saut_cooldown) / SAUT_COOLDOWN);
@@ -923,7 +899,6 @@ GameResult lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colo
         SDL_Delay(16);
     }
 
-    // --- NETTOYAGE (inchangé) ---
     free(pieces_pos);
     for (int i = 0; i < NOMBRE_MONSTRES; i++) {
         free(monstres[i].murs_connus);

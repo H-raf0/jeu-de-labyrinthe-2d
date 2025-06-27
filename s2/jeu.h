@@ -16,14 +16,12 @@ extern int VITESSE_MONSTRE;
 extern int MONSTRE_PENALITE_RAYON;
 extern int MONSTRE_PENALITE_COUT;
 
-extern int SAUT_COOLDOWN; // Cooldown en frames
+extern int SAUT_COOLDOWN; // Cooldown de saut en frames
 
 extern int NOMBRE_PIECES;
 
 
-// Déclaration de la fonction qui lance le jeu.
-// Elle prend en paramètre le rendu SDL pour ne pas avoir à le recréer.
-// Elle prend aussi le labyrinthe déjà généré.
+// Déclaration de la fonction qui lance le jeu
 GameResult lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colonnes, AudioData* audio);;
 
 #endif

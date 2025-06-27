@@ -1,9 +1,8 @@
-      
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
-#include <math.h> // Ajout pour la fonction fabs()
+#include <math.h> 
 #include "laby.h"
 #include "labySDL.h"
 
@@ -20,7 +19,6 @@
 
 
 // Mélange un tableau d'entiers en utilisant l'algorithme de Fisher-Yates.
-// Nécessaire pour respecter la suggestion de "mélanger V".
 void melanger_voisins(int* tableau, int n) {
     if (n > 1) {
         for (int i = n - 1; i > 0; i--) {
@@ -36,10 +34,10 @@ void melanger_voisins(int* tableau, int n) {
 void lancer_animation_labyrinthe(int* murs, int lignes, int colonnes) {
     int nb_cellules = lignes * colonnes;
 
-    // --- Initialisation SDL ---
+
     SDL_Init(SDL_INIT_VIDEO);
     
-    // --- Configuration de Rendu Locale ---
+
     RenderConfig local_config;
     SDL_DisplayMode dm;
     SDL_GetDesktopDisplayMode(0, &dm);
@@ -55,12 +53,12 @@ void lancer_animation_labyrinthe(int* murs, int lignes, int colonnes) {
     local_config.wall_thickness = (local_config.cell_size / 16.0f > 1) ? (int)(local_config.cell_size / 16.0f) : 1;
     local_config.offset_x = (local_config.window_w - (colonnes * local_config.cell_size)) / 2;
     local_config.offset_y = (local_config.window_h - (lignes * local_config.cell_size)) / 2;
-    g_config = local_config; // Assigner à la config globale
+    g_config = local_config;
 
     SDL_Texture* perso_texture = IMG_LoadTexture(rendu, "personnage.png");
     if (!perso_texture) { fprintf(stderr, "Erreur chargement personnage.png: %s\n", IMG_GetError()); return; }
 
-    // --- Initialisation de l'état du jeu ---
+
     int depart = 0;
     int destination = nb_cellules - 1;
     noeud n;
@@ -71,7 +69,6 @@ void lancer_animation_labyrinthe(int* murs, int lignes, int colonnes) {
     float perso_x, perso_y;
 
 
-    // --- Création de la matrice d'adjacence ---
     printf("Création de la matrice d'adjacence...\n");
     int** graphe = NULL;
     if (CURRENT_ALGO == 1) {
@@ -98,7 +95,6 @@ void lancer_animation_labyrinthe(int* murs, int lignes, int colonnes) {
     perso_x = g_config.offset_x + (depart % colonnes) * g_config.cell_size + g_config.cell_size / 2.0f;
     perso_y = g_config.offset_y + (depart / colonnes) * g_config.cell_size + g_config.cell_size / 2.0f;
     
-    // --- Boucle Principale de l'Application ---
     int quitter = 0;
     SDL_Event e;
     while (!quitter) {
@@ -107,10 +103,9 @@ void lancer_animation_labyrinthe(int* murs, int lignes, int colonnes) {
             if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE) quitter = 1;
         }
 
-        // --- Logique de mise à jour ---
         if (etape_actuelle < nb_etapes - 1) {
             int cell_suivante = chemin[etape_actuelle + 1];
-            // Calculer la position cible en pixels avec la config
+            
             float target_x = g_config.offset_x + (cell_suivante % colonnes) * g_config.cell_size + g_config.cell_size / 2.0f;
             float target_y = g_config.offset_y + (cell_suivante / colonnes) * g_config.cell_size + g_config.cell_size / 2.0f;
 
@@ -133,7 +128,7 @@ void lancer_animation_labyrinthe(int* murs, int lignes, int colonnes) {
 
             free_noeuds(&n);
 
-            // --- APPEL DE L'ALGORITHME CHOISI ---
+
             if(CURRENT_ALGO == 0) BFS_laby(murs, lignes, colonnes, destination, &n);
             else if (CURRENT_ALGO == 1) Dijkstra_laby(graphe, nb_cellules, destination, &n);
             else if (CURRENT_ALGO == 2) A_etoile_laby(murs, lignes, colonnes, depart, destination, &n, CURRENT_HEURISTIC);
@@ -147,7 +142,7 @@ void lancer_animation_labyrinthe(int* murs, int lignes, int colonnes) {
             etape_actuelle = 0;
         }
 
-        // --- Dessin de la scène ---
+        // Dessin de la scène 
         SDL_SetRenderDrawColor(rendu, 0, 0, 0, 255);
         SDL_RenderClear(rendu);
         
@@ -162,7 +157,6 @@ void lancer_animation_labyrinthe(int* murs, int lignes, int colonnes) {
 
     if (CURRENT_ALGO == 2) comparer_heuristiques_A_etoile(murs, lignes, colonnes, depart, destination);
 
-    // --- Nettoyage ---
     printf("Libération de la matrice d'adjacence...\n");
     liberer_matrice_adjacence(graphe, nb_cellules);
     free_noeuds(&n);
@@ -184,7 +178,7 @@ void demarrer_exploration_dynamique(int* murs_reels, int lignes, int colonnes) {
 
     SDL_Init(SDL_INIT_VIDEO);
     
-    // --- Configuration de Rendu Locale ---
+
     RenderConfig local_config;
     SDL_DisplayMode dm;
     SDL_GetDesktopDisplayMode(0, &dm);
@@ -209,11 +203,11 @@ void demarrer_exploration_dynamique(int* murs_reels, int lignes, int colonnes) {
 
     while (pos_actuelle != destination && !quitter_programme) {
         
-        // --- Boucle de Réflexion: L'agent reste ici jusqu'à ce qu'il puisse bouger ---
+
         bool a_transite = false;
         while (!a_transite && !quitter_programme) {
             
-            // --- CORRECTION: Le "cerveau" est créé ici, au début de chaque décision ---
+
             int** graphe_connu = creer_matrice_adjacence_connue(murs_connus, lignes, colonnes);
             if (!graphe_connu) {
                 fprintf(stderr, "Erreur création graphe connu.\n");
@@ -222,13 +216,13 @@ void demarrer_exploration_dynamique(int* murs_reels, int lignes, int colonnes) {
             }
 
             noeud plan;
-            // On planifie avec Dijkstra sur ce graphe frais
+
             Dijkstra_laby(graphe_connu, nb_cellules, destination, &plan);
             
             SDL_Event e;
             if (SDL_PollEvent(&e) && e.type == SDL_QUIT) {
                 quitter_programme = true;
-                // --- CORRECTION: Nettoyer avant de continuer ---
+
                 free_noeuds(&plan);
                 liberer_matrice_adjacence(graphe_connu, nb_cellules);
                 continue;
@@ -266,7 +260,7 @@ void demarrer_exploration_dynamique(int* murs_reels, int lignes, int colonnes) {
             if (meilleur_voisin == -1) {
                 printf("IMPASSE CONNUE. L'agent ne peut plus bouger.\n");
                 quitter_programme = true;
-                // --- CORRECTION: Nettoyer avant de continuer ---
+
                 free_noeuds(&plan);
                 liberer_matrice_adjacence(graphe_connu, nb_cellules);
                 continue;
@@ -291,7 +285,7 @@ void demarrer_exploration_dynamique(int* murs_reels, int lignes, int colonnes) {
                 for (int i = 0; i < nb_cellules; i++) dessiner_murs_connus(rendu, i % colonnes, i / colonnes, murs_connus, colonnes);
                 dessiner_marqueurs(rendu, depart, destination, colonnes);
 
-                // Calculer la position en pixels avec la config
+
                 float perso_px = g_config.offset_x + (pos_actuelle % colonnes + 0.5f) * g_config.cell_size;
                 float perso_py = g_config.offset_y + (pos_actuelle / colonnes + 0.5f) * g_config.cell_size;
                 dessiner_personnage(rendu, perso_texture, perso_px, perso_py);
@@ -300,7 +294,7 @@ void demarrer_exploration_dynamique(int* murs_reels, int lignes, int colonnes) {
                 SDL_Delay(DELAI_PAS);
             }
             
-            // --- Le "cerveau" est détruit ici, à la fin de chaque décision ---
+            
             free_noeuds(&plan);
             liberer_matrice_adjacence(graphe_connu, nb_cellules);
 
@@ -328,19 +322,19 @@ void demarrer_exploration_inconnue(int* murs_reels, int lignes, int colonnes, in
     // --- Structures de données de l'agent (G, F, O) ---
     // G: Connaissance du graphe (murs découverts)
     int* murs_connus = calloc(nb_cellules, sizeof(int));
-    // F: Ensemble des noeuds visités (Closed Set). Un tableau de booléens est la meilleure structure ici.
+    // F: Ensemble des noeuds visités 
     bool* noeuds_visites = calloc(nb_cellules, sizeof(bool));
-    // O: Ensemble des noeuds de la frontière (Open Set). Un simple tableau suffit.
+    // O: Ensemble des noeuds de la frontière
     int* frontier_nodes = malloc(sizeof(int) * nb_cellules);
     int frontier_size = 0;
     // Données pour la heatmap de l'affichage
     int* passages_counts = calloc(nb_cellules, sizeof(int));
     int max_passages = 0;
 
-    // --- Initialisation SDL ---
+
     SDL_Init(SDL_INIT_VIDEO);
 
-    // --- Configuration de Rendu Locale ---
+
     RenderConfig local_config;
     SDL_DisplayMode dm;
     SDL_GetDesktopDisplayMode(0, &dm);
@@ -360,25 +354,25 @@ void demarrer_exploration_inconnue(int* murs_reels, int lignes, int colonnes, in
 
     SDL_Texture* perso_texture = IMG_LoadTexture(rendu, "personnage.png");
 
-    // --- Initialisation de l'algorithme (selon la spec) ---
+
     int pos_actuelle = depart;
     // "mettre noeud dans O"
     frontier_nodes[frontier_size++] = pos_actuelle; 
 
     bool destination_trouvee = false;
     
-    // --- Boucle d'Itération Principale ---
+    //  Boucle d'Itération Principale 
     // La boucle continue tant qu'il y a des noeuds à explorer sur la frontière.
     while (frontier_size > 0 && !destination_trouvee) {
         SDL_Event e;
         if (SDL_PollEvent(&e) && e.type == SDL_QUIT) break;
         if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE) break;
         
-        // --- ÉTAPE 1: DÉCIDER DE LA PROCHAINE CIBLE SUR LA FRONTIÈRE ---
+        // 1: DÉCIDER DE LA PROCHAINE CIBLE SUR LA FRONTIÈRE ---
         // "rechercher un noeud de O à distance minimale de noeud (pos_actuelle)"
 
         printf("Planification locale avec Dijkstra sur la base des coûts connus...\n");
-        // 1. Créer le "cerveau" pondéré de l'agent
+        // Créer le "cerveau" pondéré de l'agent
 
         //int** graphe_connu = creer_matrice_couts_connus(murs_connus, passages_counts, lignes, colonnes);
         int** graphe_connu = creer_matrice_adjacence_connue(murs_connus, lignes, colonnes);
@@ -406,7 +400,7 @@ void demarrer_exploration_inconnue(int* murs_reels, int lignes, int colonnes, in
             break;
         }
 
-        // --- ÉTAPE 2: SE DÉPLACER VERS LA CIBLE CHOISIE ---
+        // 2: SE DÉPLACER VERS LA CIBLE CHOISIE ---
         // "se rendre en ce noeud en utilisant le plus court chemin dans G"
         int* chemin_vers_target = malloc(sizeof(int) * nb_cellules);
         int nb_etapes = reconstruire_chemin_inverse(&plan_vers_frontiere, pos_actuelle, target_node, nb_cellules, chemin_vers_target);
@@ -420,7 +414,7 @@ void demarrer_exploration_inconnue(int* murs_reels, int lignes, int colonnes, in
             passages_counts[pos_actuelle]++;
             if (passages_counts[pos_actuelle] > max_passages) max_passages = passages_counts[pos_actuelle];
 
-            // Code de Dessin (identique)
+            // Code de Dessin
             SDL_SetRenderDrawColor(rendu, 0, 0, 0, 255);
             SDL_RenderClear(rendu);
             dessiner_heatmap_passage(rendu, passages_counts, lignes, colonnes, max_passages);
@@ -429,7 +423,7 @@ void demarrer_exploration_inconnue(int* murs_reels, int lignes, int colonnes, in
             }
             SDL_SetRenderDrawColor(rendu, 0, 255, 0, 255);
             
-            // Calculer la position et taille du marqueur de destination avec la config
+
             SDL_Rect dest_rect = {
                 g_config.offset_x + (destination_reelle % colonnes) * g_config.cell_size, 
                 g_config.offset_y + (destination_reelle / colonnes) * g_config.cell_size, 
@@ -438,7 +432,6 @@ void demarrer_exploration_inconnue(int* murs_reels, int lignes, int colonnes, in
             };
             SDL_RenderFillRect(rendu, &dest_rect);
 
-            // Calculer la position en pixels du personnage avec la config
             float perso_px = g_config.offset_x + (pos_actuelle % colonnes + 0.5f) * g_config.cell_size;
             float perso_py = g_config.offset_y + (pos_actuelle / colonnes + 0.5f) * g_config.cell_size;
             dessiner_personnage(rendu, perso_texture, perso_px, perso_py);
@@ -454,7 +447,7 @@ void demarrer_exploration_inconnue(int* murs_reels, int lignes, int colonnes, in
         free(chemin_vers_target);
         if (destination_trouvee) continue;
 
-        // --- ÉTAPE 3: EXPLORER DEPUIS LA NOUVELLE POSITION ATTEINTE ---
+        // 3: EXPLORER DEPUIS LA NOUVELLE POSITION ATTEINTE ---
         pos_actuelle = target_node;
 
         // "mettre noeud dans F, l’enlever de O"
@@ -526,7 +519,7 @@ void demarrer_exploration_inconnue(int* murs_reels, int lignes, int colonnes, in
 int main() {
     unsigned int seed = time(NULL);
     printf("seed est : %u\n", seed);
-    srand(seed); // Utiliser une seed différente à chaque fois
+    srand(seed); 
 
     int lignes = 20;
     int colonnes = 30;

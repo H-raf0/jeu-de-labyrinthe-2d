@@ -5,7 +5,7 @@
 #include "labySDL.h"
 #include "laby.h"
 
-#define MAX_COUT 10 // Coût maximal pour traverser une cellule
+#define MAX_COUT 10 // poids pour penetrer une cellule
 
 
 // Initialise une partition de taille 'total'
@@ -14,7 +14,7 @@ void init_partition(partition* p, int total) {
     p->parent = malloc(sizeof(int) * total);
     p->rang = malloc(sizeof(int) * total);
     if (!p->parent || !p->rang) {
-        fprintf(stderr, "Allocation mémoire impossible pour partition\n");
+        printf("Allocation mémoire impossible pour partition\n");
         exit(EXIT_FAILURE);
     }
     for (int i = 0; i < total; i++) {
@@ -72,7 +72,7 @@ int generation_grille_vide(arete **G_ptr, int lignes, int colonnes) {
     int max_aretes = 2 * lignes * colonnes - lignes - colonnes; // (n-1) * m + (m-1) * n = 2 * n * m - m - n
     arete *G = malloc(sizeof(arete) * max_aretes); // tab de tous les aretes possibles
     if (!G) {
-        fprintf(stderr, "Allocation mémoire impossible pour arêtes\n");
+        printf("Allocation mémoire impossible pour arêtes\n");
         exit(EXIT_FAILURE);
     }
     int compteur = 0;
@@ -436,111 +436,8 @@ void afficher_labyrinthe_unicode(int *murs, int lignes, int colonnes) {
     printf("\n");
 }
 
-/*
 
-/ **********************************************
-                    BFS
-*********************************************** /
-void BFS(int m_adj[N][N], int origine,noeud* n){
-    file * f = malloc(sizeof(file));
-    initialiser_file(f); // <--- APPEL INCORRECT
-    initialiser_noeuds(n ,origine); // <--- APPEL INCORRECT
-    n->visite[origine]=1;
-    enfiler(f,origine);
-    while(!filevide(f)){
-        int x=defiler(f);
-        for(int k=0;k<N;++k){
-            if(n->visite[k]==0 && m_adj[x][k]==1){
-                enfiler(f,k);
-                n->visite[k]=1;
-                n->distance[k]=n->distance[x]+1;
-            }
-        }
-    }
-    free(f);
-}
-
-/ **********************************************
-                DIJKSTRA    
-*********************************************** /
-void dijkstra(int graphe[N][N], int origine, noeud *n) {
-    tas t;
-    t.taille = 0;
-    initialiser_noeuds(n,origine); // <--- APPEL INCORRECT
-    inserer(&t, origine, n);
-    while (t.taille > 0) {
-        int u = extraire_min(&t, n);
-        if (n->visite[u]) continue;
-        n->visite[u] = 1;
-
-        for (int v = 0; v < N; v++) {
-            if (graphe[u][v] > 0 && !n->visite[v]) {
-                int alt = n->distance[u] + graphe[u][v];
-                if (alt < n->distance[v]) {
-                    n->distance[v] = alt;
-                    inserer(&t, v, n);
-                }
-            }
-        }
-    }
-}
-
-/ **********************************************
-                A_etoile 
-*********************************************** /
-
-// ?
-void A_etoile(int graphe[N][N], int depart, int arrivee, int positions[N][2]) {
-    int g[N], parent[N];
-    bool ferme[N] = {false};
-
-    for (int i = 0; i < N; i++) {
-        g[i] = INF;
-        parent[i] = -1;
-    }
-
-    g[depart] = 0;
-    int h = estimation(positions[depart][0], positions[arrivee][0], positions[depart][1], positions[arrivee][1], 1);
-    avl* ouvert = NULL;
-    ouvert = inserer_avl(ouvert, depart, g[depart] + h);
-
-    while (ouvert != NULL) {
-        int u;
-        ouvert = extraire_min_avl(ouvert, &u);
-
-        if (u == arrivee) {
-            printf("Chemin trouve !\n");
-            int temp = arrivee;
-            while (temp != -1) {
-                printf("%d <- ", temp);
-                temp = parent[temp];
-            }
-            printf("Depart\n");
-            return;
-        }
-
-        ferme[u] = true;
-
-        for (int v = 0; v < N; v++) {
-            if (graphe[u][v] && !ferme[v]) {
-                int tentative_g = g[u] + graphe[u][v];
-                if (tentative_g < g[v]) {
-                    g[v] = tentative_g;
-                    parent[v] = u;
-                    int h = estimation(positions[v][0], positions[arrivee][0], positions[v][1], positions[arrivee][1], 1);
-                    ouvert = inserer_avl(ouvert, v, g[v] + h);
-                }
-            }
-        }
-    }
-
-    printf("Aucun chemin trouvé.\n");
-}*/
-
-
-
-
-// BFS adapté pour naviguer dans le labyrinthe en utilisant le tableau de murs
+// BFS pour naviguer dans le labyrinthe en utilisant le tableau de murs
 void BFS_laby(int *murs, int lignes, int colonnes, int origine, noeud* n) {
     int nb_cellules = lignes * colonnes;
     file f;
@@ -608,14 +505,14 @@ void Dijkstra_laby(int** graphe, int nb_cellules, int destination, noeud* n) {
     t.tab = malloc(sizeof(int) * nb_cellules);
     t.positions = malloc(sizeof(int) * nb_cellules); // Allouer le tableau des positions
     if (!t.tab || !t.positions) {
-        fprintf(stderr, "Erreur d'allocation pour le tas dans Dijkstra\n");
+        printf("Erreur d'allocation pour le tas dans Dijkstra\n");
         if(t.tab) free(t.tab);
         if(t.positions) free(t.positions);
         return;
     }
     t.taille = 0;
 
-    // AJOUT : Initialiser les positions à -1 (non présent dans le tas)
+    // Initialiser les positions à -1 (non présent dans le tas)
     for (int i = 0; i < nb_cellules; i++) {
         t.positions[i] = -1;
     }
@@ -645,7 +542,7 @@ void Dijkstra_laby(int** graphe, int nb_cellules, int destination, noeud* n) {
         }
     }
     
-    // NOUVEAU : Libérer la mémoire des deux tableaux
+    // Libérer la mémoire
     free(t.tab);
     free(t.positions);
 }
@@ -674,20 +571,20 @@ int reconstruire_chemin(noeud* n, int depart, int destination, int* chemin_buffe
         chemin_buffer[etapes++] = courant;
         courant = n->parent[courant];
         
-        // Sécurité simple et efficace pour éviter les boucles infinies
+        // éviter les boucles infinies, impossible pour le moment
         if (courant == -1) { 
-            fprintf(stderr, "Erreur: Chemin cassé lors de la reconstruction.\n");
+            printf("Erreur: Chemin cassé lors de la reconstruction.\n");
             return 0;
         }
     }
-    // Ne pas oublier d'ajouter la destination elle-même à la fin du chemin.
+    // ajouter la destination à la fin du chemin.
     chemin_buffer[etapes++] = destination;
     
     return etapes;
 }
 
 int reconstruire_chemin_inverse(noeud* n, int depart, int destination, int nb_cellules, int* chemin_buffer) {
-    // Pour A*, la recherche part de `depart`, donc on vérifie si `destination` a été atteinte.
+    // Pour A*, la recherche part de "depart", donc on vérifie si "destination" a été atteinte.
     if (n->parent[destination] == -1 && depart != destination) {
         printf("Avertissement : Pas de chemin trouvé entre %d et %d\n", depart, destination);
         return 0; // Pas de chemin
@@ -705,24 +602,23 @@ int reconstruire_chemin_inverse(noeud* n, int depart, int destination, int nb_ce
         if (courant == depart) break; // On a atteint le début, on s'arrête.
         courant = n->parent[courant];
         
-        // Sécurité pour les cas où le chemin serait cassé pour une autre raison
+        
         if (etapes >= nb_cellules) {
-             fprintf(stderr, "Erreur: Boucle infinie détectée dans reconstruire_chemin_inverse.\n");
-             free(chemin_temp);
-             return 0;
+            printf("Erreur dans la reconstruction du chemin\n");
+            free(chemin_temp);
+            return 0;
         }
     }
     
     // Si la boucle s'est terminée sans trouver le départ, il y a un problème.
     if (courant != depart) {
-        fprintf(stderr, "Erreur: Chemin cassé (inverse), impossible de remonter de %d à %d.\n", destination, depart);
+        printf("Erreur dans la reconstruction du chemin\n");
         free(chemin_temp);
         return 0;
     }
 
 
-    // Le chemin est dans chemin_temp dans l'ordre inverse (destination -> depart).
-    // On le copie dans le buffer final dans le bon ordre (depart -> destination).
+    // on inverse l'odre du chemin
     for (int i = 0; i < etapes; i++) {
         chemin_buffer[i] = chemin_temp[etapes - 1 - i];
     }
@@ -736,7 +632,7 @@ int A_etoile_laby(int *murs, int lignes, int colonnes, int depart, int destinati
     int *g_costs = malloc(sizeof(int) * nb_cellules); // Tableau pour les coûts g(n)
 
     if (!g_costs) {
-        fprintf(stderr, "Allocation échouée pour g_costs dans A*\n");
+        printf("Allocation échouée pour g_costs dans A*\n");
         return -1;
     }
 
@@ -753,36 +649,36 @@ int A_etoile_laby(int *murs, int lignes, int colonnes, int depart, int destinati
     int x_depart, y_depart;
     indice_vers_coord(depart, colonnes, &x_depart, &y_depart);
     
-    // Le f_score du départ est juste l'heuristique (car g=0)
+    // Valeur de f du départ est juste l'heuristique (car g=0)
     n->distance[depart] = estimation(x_depart, x_dest, y_depart, y_dest, type_heuristique);
 
     // Initialisation du tas (file de priorité)
-    tas open_set;
-    open_set.tab = malloc(sizeof(int) * nb_cellules);
-    open_set.positions = malloc(sizeof(int) * nb_cellules);
-    open_set.taille = 0;
+    tas t;
+    t.tab = malloc(sizeof(int) * nb_cellules);
+    t.positions = malloc(sizeof(int) * nb_cellules);
+    t.taille = 0;
 
     for (int i = 0; i < nb_cellules; i++) {
-        open_set.positions[i] = -1;
+        t.positions[i] = -1;
     }
 
-    // Initialiser les positions à -1 (signifie "pas dans le tas")
-    inserer(&open_set, depart, n);
+    // Initialiser les positions à -1, signifie "pas dans le tas"
+    inserer(&t, depart, n);
 
     int noeuds_visites = 0;
 
-    while (open_set.taille > 0) {
-        int u = extraire_min(&open_set, n);
+    while (t.taille > 0) {
+        int u = extraire_min(&t, n);
         noeuds_visites++;
 
         if (u == destination) {
             free(g_costs);
-            free(open_set.tab);
-            free(open_set.positions);
+            free(t.tab);
+            free(t.positions);
             return noeuds_visites; // Chemin trouvé
         }
 
-        // n->visite agit comme le "closed set" pour éviter de traiter un noeud plusieurs fois
+        // n->visite = 1 si déjà visité
         n->visite[u] = 1;
 
         int x_u, y_u;
@@ -799,13 +695,13 @@ int A_etoile_laby(int *murs, int lignes, int colonnes, int depart, int destinati
         for (int i = 0; i < nb_voisins; i++) {
             int v = voisins[i];
             
-            if (n->visite[v]) continue; // Déjà dans le closed set
+            if (n->visite[v]) continue; // Existe déjà
 
-            // Le coût pour se déplacer à un voisin est de 1 dans un labyrinthe non-pondéré
+            // Le coût pour se déplacer à un voisin est 1 içi
             int tentative_g = g_costs[u] + 1;
 
             if (tentative_g < g_costs[v]) {
-                // Ce chemin vers v est meilleur que le précédent
+                // Ce chemin vers v est mieux que le précédent
                 n->parent[v] = u;
                 g_costs[v] = tentative_g;
 
@@ -813,15 +709,15 @@ int A_etoile_laby(int *murs, int lignes, int colonnes, int depart, int destinati
                 indice_vers_coord(v, colonnes, &x_v, &y_v);
                 int h_cost = estimation(x_v, x_dest, y_v, y_dest, type_heuristique);
                 
-                n->distance[v] = g_costs[v] + h_cost; // n->distance est notre f_score
+                n->distance[v] = g_costs[v] + h_cost; // n->distance est notre f(n)
                 
-                // On vérifie si v est DÉJÀ dans le tas (open_set)
-                if (open_set.positions[v] == -1) {
+                // On vérifie si v est DÉJÀ dans le tas t
+                if (t.positions[v] == -1) {
                     // S'il n'y est pas, on l'insère.
-                    inserer(&open_set, v, n);
+                    inserer(&t, v, n);
                 } else {
                     // S'il y est déjà, on met simplement sa priorité à jour.
-                    mettre_a_jour_priorite(&open_set, v, n);
+                    mettre_a_jour_priorite(&t, v, n);
                 }
             }
         }
@@ -829,8 +725,8 @@ int A_etoile_laby(int *murs, int lignes, int colonnes, int depart, int destinati
 
     // Pas de chemin trouvé
     free(g_costs);
-    free(open_set.tab);
-    free(open_set.positions);
+    free(t.tab);
+    free(t.positions);
     return noeuds_visites;
 }
 
@@ -842,17 +738,17 @@ void comparer_heuristiques_A_etoile(int* murs, int lignes, int colonnes, int dep
 
     printf("\n--- Comparaison des Heuristiques A* pour le trajet %d -> %d ---\n", depart, destination);
 
-    // 1. Distance de Manhattan
+    // Distance de Manhattan
     noeuds_visites = A_etoile_laby(murs, lignes, colonnes, depart, destination, &n, HEURISTIC_MANHATTAN);
     printf("Heuristique MANHATTAN : %d noeuds visités.\n", noeuds_visites);
     free_noeuds(&n);
 
-    // 2. Distance Euclidienne
+    // Distance Euclidienne
     noeuds_visites = A_etoile_laby(murs, lignes, colonnes, depart, destination, &n, HEURISTIC_EUCLIDEAN);
     printf("Heuristique EUCLIDIENNE : %d noeuds visités.\n", noeuds_visites);
     free_noeuds(&n);
 
-    // 3. Distance de Tchebychev
+    // Distance de Tchebychev
     noeuds_visites = A_etoile_laby(murs, lignes, colonnes, depart, destination, &n, HEURISTIC_TCHEBYCHEV);
     printf("Heuristique TCHEBYCHEV: %d noeuds visités.\n", noeuds_visites);
     free_noeuds(&n);

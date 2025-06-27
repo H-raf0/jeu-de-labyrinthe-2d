@@ -5,7 +5,7 @@
 #include <SDL2/SDL_image.h>
 #include "laby.h"
 #include "structures.h"
-// Constantes
+
 #define TUILE_TAILLE 16
 #define TAILLE_CELLULE 50
 

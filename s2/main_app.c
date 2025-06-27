@@ -7,18 +7,15 @@
 #include "jeu.h"
 //#include "endscreen.h"
 
-// Note : g_config est une variable globale définie dans labySDL.c
-// et déclarée comme 'extern' via labySDL.h (inclus par jeu.h ou laby.h)
-// Elle contiendra les dimensions de l'écran.
+
 
 
 int LABY_HE = 20;
 int LABY_WI = 30;
 
 
-// La signature de la fonction ne change pas, car elle utilisera g_config
 void show_main_menu(SDL_Renderer* renderer) {
-    // --- Chargement des ressources du menu ---
+    // Chargement des ressources du menu
     AudioData audio_data;
     load_sounds(&audio_data);
 
@@ -29,12 +26,12 @@ void show_main_menu(SDL_Renderer* renderer) {
     // On passe les dimensions de l'écran, stockées dans g_config, à init_parallax
     init_parallax(renderer, &background, g_config.window_w);
 
-    // --- Variables du menu ---
+    //  Variables du menu 
     const char* difficulty_names[] = {"Facile", "Moyen", "Difficile"};
     DifficultyLevel current_difficulty = EASY;
     bool sound_on = true;
 
-    // --- Calcul de la disposition relative du menu ---
+    //  Calcul de la disposition relative du menu 
     int button_width = g_config.window_w / 3.5;  // Largeur relative à la taille de l'écran
     int button_height = g_config.window_h / 12; // Hauteur relative à la taille de l'écran
     int center_x = (g_config.window_w - button_width) / 2;
@@ -56,7 +53,7 @@ void show_main_menu(SDL_Renderer* renderer) {
     SDL_Rect diff_left_arrow_rect = {diff_rect.x, diff_rect.y, diff_rect.w / 3, diff_rect.h};
     SDL_Rect diff_right_arrow_rect = {diff_rect.x + (2 * diff_rect.w / 3), diff_rect.y, diff_rect.w / 3, diff_rect.h};
 
-    // --- Boucle du Menu ---
+    // Boucle du Menu 
     bool running = true;
     while (running) {
         SDL_Event event;
@@ -84,49 +81,49 @@ void show_main_menu(SDL_Renderer* renderer) {
                             RAPP_CLDWN = 200;
                             MEMOIRE_MAX = 30;
                             VITESSE_MONSTRE = 10;
-                            MONSTRE_PENALITE_RAYON = 4;
+                            MONSTRE_PENALITE_RAYON = 2;
                             MONSTRE_PENALITE_COUT = 20;
 
-                            SAUT_COOLDOWN = 60; // Cooldown en frames
+                            SAUT_COOLDOWN = 60*2; // Cooldown en frames
 
                             NOMBRE_PIECES = 1;
                             break;
                         case MEDIUM:
                             LABY_HE = 20;
                             LABY_WI = 25;
-                            NOMBRE_MONSTRES = 3;
-                            SEUIL_DETECTION_HUNT = 5;
+                            NOMBRE_MONSTRES = 4;
+                            SEUIL_DETECTION_HUNT = 4;
                             DUREE_PISTE = 50;
                             RAPP_CLDWN = 80;
                             MEMOIRE_MAX = 200;
                             VITESSE_MONSTRE = 0;
-                            MONSTRE_PENALITE_RAYON = 4;
+                            MONSTRE_PENALITE_RAYON = 5;
                             MONSTRE_PENALITE_COUT = 20;
 
-                            SAUT_COOLDOWN = 300; // Cooldown en frames
+                            SAUT_COOLDOWN = 60*5; // Cooldown en frames
 
-                            NOMBRE_PIECES = 2;
+                            NOMBRE_PIECES = 4;
                             break;
                         case HARD:
                             LABY_HE = 30;
                             LABY_WI = 40;
-                            NOMBRE_MONSTRES = 5;
-                            SEUIL_DETECTION_HUNT = 10;
+                            NOMBRE_MONSTRES = 6;
+                            SEUIL_DETECTION_HUNT = 7;
                             DUREE_PISTE = 100;
                             RAPP_CLDWN = 50;
                             MEMOIRE_MAX = 99999;
                             VITESSE_MONSTRE = 0;
-                            MONSTRE_PENALITE_RAYON = 5;
+                            MONSTRE_PENALITE_RAYON = 10;
                             MONSTRE_PENALITE_COUT = 25;
 
-                            SAUT_COOLDOWN = 600; // Cooldown en frames
+                            SAUT_COOLDOWN = 60*8; // Cooldown en frames
 
-                            NOMBRE_PIECES = 3;
+                            NOMBRE_PIECES = 4;
                             break;
                     }
 
                     
-                    // 2. GÉNÉRER LE LABYRINTHE MAINTENANT, AVEC LES BONNES DIMENSIONS
+                    // GÉNÉRER LE LABYRINTHE MAINTENANT, AVEC LES BONNES DIMENSIONS
                     int lignes = LABY_HE;
                     int colonnes = LABY_WI;
                     int nb_cellules = lignes * colonnes;
@@ -153,10 +150,10 @@ void show_main_menu(SDL_Renderer* renderer) {
                     free(murs_reels);
 
 
-                    // NOUVEAU : On agit en fonction du résultat
+                    // On agit en fonction du résultat
                     switch(result) {
                         case GAME_WON:
-                            show_end_screen(renderer, "congratulations.bmp"); // Utilisez PNG pour la transparence
+                            show_end_screen(renderer, "congratulations.bmp");
                             break;
                         case GAME_LOST:
                             show_end_screen(renderer, "gameover.bmp");
@@ -189,7 +186,7 @@ void show_main_menu(SDL_Renderer* renderer) {
             }
         }
 
-        // --- Rendu du menu ---
+        // Rendu du menu 
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
 
@@ -209,7 +206,7 @@ void show_main_menu(SDL_Renderer* renderer) {
         draw_sound_icon(renderer, &sound_rect, sound_on, is_hovering_sound);
 
         SDL_RenderPresent(renderer);
-        SDL_Delay(16); // 60fps
+        SDL_Delay(16); // =~60fps
     }
 
     // --- Nettoyage des ressources du menu ---
@@ -221,7 +218,6 @@ void show_main_menu(SDL_Renderer* renderer) {
 int main(int argc, char* argv[]) {
     (void)argc; (void)argv;
 
-    // --- Initialisation Globale de SDL ---
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
         printf("SDL initialization failed: %s\n", SDL_GetError());
         return 1;
@@ -237,7 +233,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // --- Création Fenêtre et Rendu directement en plein écran ---
+    //  Création Fenêtre et Rendu directement en plein écran 
     SDL_DisplayMode dm;
     if (SDL_GetDesktopDisplayMode(0, &dm) != 0) {
         printf("SDL_GetDesktopDisplayMode failed: %s\n", SDL_GetError());
@@ -257,20 +253,20 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // --- Initialisation de la configuration globale de rendu ---
+    //  Initialisation de la configuration globale de rendu 
     // Cette configuration sera utilisée par le menu ET par le jeu
     g_config.window_w = dm.w;
     g_config.window_h = dm.h;
 
-    // --- Génération du Labyrinthe (logique de l'ancien main de jeu.c) ---
+    //  Génération du Labyrinthe 
     srand(time(NULL));
     
 
-    // --- Lancement du Menu ---
+    //  Lancement du Menu 
     // La fenêtre est déjà en plein écran, et g_config est prête
     show_main_menu(renderer);
 
-    // --- Nettoyage Final ---
+    //  Nettoyage Final 
     printf("Fermeture du programme.\n");
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
