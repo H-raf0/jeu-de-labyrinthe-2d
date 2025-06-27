@@ -127,7 +127,7 @@ void apprendre_mur(Monstre * monstre, int u, int v, int colonnes) {
     else if (diff == colonnes) dir_flag = 4;
     else if (diff == -1) dir_flag = 8;
     if (monstre -> murs_connus[u] & dir_flag) return;
-    printf("Monstre %d apprend le mur entre %d et %d.\n", monstre -> pos, u, v);
+    //printf("Monstre %d apprend le mur entre %d et %d.\n", monstre -> pos, u, v);
     ajouter_mur(monstre -> murs_connus, colonnes, u, v);
     if (monstre -> memoire_taille_actuelle >= MEMOIRE_MAX) {
         arete mur_oublie = monstre -> memoire_murs[monstre -> memoire_tete];
@@ -238,7 +238,12 @@ int gidi(Monstre * monstre, int * murs_reels, int lignes, int colonnes,
                     }
                 }
                 if (!deja_dans_frontiere) {
-                    monstre -> frontier_nodes[monstre -> frontier_size++] = v;
+                    if (monstre -> frontier_size < nb_cellules) {
+                        monstre -> frontier_nodes[monstre -> frontier_size++] = v;
+                    } else {
+                        //la frontière est pleine, ce qui est anormal
+                        printf("Avertissement: La frontière est pleine, impossible d'ajouter le noeud %d\n", v);
+                    }
                 }
             }
         }
@@ -755,7 +760,7 @@ GameResult lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colo
                 pieces_collectees++;
                 printf("Pièce collectée ! (%d / %d)\n", pieces_collectees, NOMBRE_PIECES);
 
-                // NOUVEAU : Jouer le son de la pièce !
+                //Jouer le son de la pièce !
                 play_o2_sound(audio);
             }
         }
@@ -764,7 +769,7 @@ GameResult lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colo
 
             Mix_HaltMusic(); // Arrête la musique de fond pour plus d'impact
             play_victory_sound(audio);
-            SDL_Delay(1500); // Petite pause pour laisser le son se jouer
+            //SDL_Delay(1500); // Petite pause pour laisser le son se jouer
             
             free(pieces_pos);
             for (int i = 0; i < NOMBRE_MONSTRES; i++) {
@@ -788,7 +793,7 @@ GameResult lancer_jeu(SDL_Renderer* rendu, int* murs_reels, int lignes, int colo
                 
                 Mix_HaltMusic(); // Arrête la musique de fond pour plus d'impact
                 play_failure_sound(audio);
-                SDL_Delay(1500); // Petite pause pour laisser le son se jouer
+                //SDL_Delay(1500); // Petite pause pour laisser le son se jouer
 
                 free(pieces_pos);
                 for (int i = 0; i < NOMBRE_MONSTRES; i++) {

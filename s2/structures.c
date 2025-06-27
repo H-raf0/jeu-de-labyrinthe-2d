@@ -72,13 +72,28 @@ void echanger(int *a, int *b) {
     *b = temp;
 }
 
+static void echanger_tas_interne(tas *t, int i, int j) {
+    // Récupérer les ID des sommets aux indices i et j
+    int sommet_a = t->tab[i];
+    int sommet_b = t->tab[j];
+
+    // Échanger les sommets dans le tableau principal du tas
+    echanger(&t->tab[i], &t->tab[j]);
+
+    // Mettre à jour leurs positions dans le tableau de positions
+    t->positions[sommet_a] = j;
+    t->positions[sommet_b] = i;
+}
+
+// MODIFIÉ : Utilise la nouvelle fonction d'échange
 void entasser_haut(tas *t, int i, noeud *n) {
     while (i > 0 && n->distance[t->tab[i]] < n->distance[t->tab[(i - 1) / 2]]) {
-        echanger(&t->tab[i], &t->tab[(i - 1) / 2]);
+        echanger_tas_interne(t, i, (i - 1) / 2);
         i = (i - 1) / 2;
     }
 }
 
+// MODIFIÉ : Utilise la nouvelle fonction d'échange
 void entasser_bas(tas *t, int i, noeud *n) {
     int min = i;
     int g = 2 * i + 1;
@@ -90,23 +105,52 @@ void entasser_bas(tas *t, int i, noeud *n) {
         min = d;
 
     if (min != i) {
-        echanger(&t->tab[i], &t->tab[min]);
+        echanger_tas_interne(t, i, min);
         entasser_bas(t, min, n);
     }
 }
 
+// MODIFIÉ : Met à jour la position lors de l'insertion
 void inserer(tas *t, int sommet, noeud *n) {
+    // Placer le nouvel élément à la fin et noter sa position
     t->tab[t->taille] = sommet;
-    entasser_haut(t, t->taille, n);
+    t->positions[sommet] = t->taille;
+    
+    // Augmenter la taille et restaurer la propriété du tas
     t->taille++;
+    entasser_haut(t, t->taille - 1, n);
 }
 
+// MODIFIÉ : Met à jour les positions lors de l'extraction
 int extraire_min(tas *t, noeud *n) {
+    if (t->taille == 0) return -1;
+    
     int min = t->tab[0];
-    t->tab[0] = t->tab[--t->taille];
+    int dernier_sommet = t->tab[t->taille - 1];
+
+    // Remplacer la racine par le dernier élément
+    t->tab[0] = dernier_sommet;
+    t->positions[dernier_sommet] = 0; // Le dernier élément est maintenant à la racine (index 0)
+
+    // Marquer le sommet extrait comme n'étant plus dans le tas
+    t->positions[min] = -1; 
+
+    t->taille--;
     entasser_bas(t, 0, n);
     return min;
 }
+
+
+void mettre_a_jour_priorite(tas *t, int sommet, noeud *n) {
+    // Récupérer l'index du sommet dans le tas grâce à notre tableau de positions
+    int i = t->positions[sommet];
+
+    // Comme on a "diminué" la clé (le f_score), l'élément ne peut que monter dans le tas.
+    // Il suffit donc de le "faire remonter" (entasser_haut).
+    entasser_haut(t, i, n);
+}
+
+
 void afficher_tas(tas *t, noeud *n) {
     printf("Tas actuel : [ ");
     for (int i = 0; i < t->taille; i++) {

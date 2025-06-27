@@ -9,7 +9,7 @@
 
 #define CURRENT_ALGO 2
 // 0 BFS, 1 DIJSKTRA, 2 A*
-#define VITESSE 0.5f // Vitesse d'interpolation ajustée pour plus de fluidité
+#define VITESSE 0.5f // Vitesse d'interpolation
 
 #define CURRENT_HEURISTIC HEURISTIC_MANHATTAN // HEURISTIC_MANHATTAN ou HEURISTIC_EUCLIDEAN ou HEURISTIC_TCHEBYCHEV
 
@@ -372,6 +372,7 @@ void demarrer_exploration_inconnue(int* murs_reels, int lignes, int colonnes, in
     while (frontier_size > 0 && !destination_trouvee) {
         SDL_Event e;
         if (SDL_PollEvent(&e) && e.type == SDL_QUIT) break;
+        if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE) break;
         
         // --- ÉTAPE 1: DÉCIDER DE LA PROCHAINE CIBLE SUR LA FRONTIÈRE ---
         // "rechercher un noeud de O à distance minimale de noeud (pos_actuelle)"
@@ -544,7 +545,7 @@ int main() {
     for (int i = 0; i < nb_aretes_arbre; i++) supprimer_mur(murs_reels, colonnes, arbre[i].u, arbre[i].v);
     free(arbre);
 
-    //lancer_animation_labyrinthe(murs_reels, lignes, colonnes);
+    lancer_animation_labyrinthe(murs_reels, lignes, colonnes);
     //gidc
     //demarrer_exploration_dynamique(murs_reels, lignes, colonnes);
     
@@ -557,7 +558,7 @@ int main() {
     //printf("La destination secrète est en %d\n", destination_secrete);
 
     //gidi
-    demarrer_exploration_inconnue(murs_reels, lignes, colonnes, destination_secrete);
+    //demarrer_exploration_inconnue(murs_reels, lignes, colonnes, destination_secrete);
     
     
     

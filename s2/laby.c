@@ -606,34 +606,48 @@ void Dijkstra_laby(int** graphe, int nb_cellules, int destination, noeud* n) {
     
     tas t;
     t.tab = malloc(sizeof(int) * nb_cellules);
+    t.positions = malloc(sizeof(int) * nb_cellules); // Allouer le tableau des positions
+    if (!t.tab || !t.positions) {
+        fprintf(stderr, "Erreur d'allocation pour le tas dans Dijkstra\n");
+        if(t.tab) free(t.tab);
+        if(t.positions) free(t.positions);
+        return;
+    }
     t.taille = 0;
+
+    // AJOUT : Initialiser les positions à -1 (non présent dans le tas)
+    for (int i = 0; i < nb_cellules; i++) {
+        t.positions[i] = -1;
+    }
+
     inserer(&t, destination, n);
 
     while (t.taille > 0) {
         int u = extraire_min(&t, n);
-        if (n->visite[u]) continue;
         n->visite[u] = 1;
 
-        // LA LOGIQUE CHANGE ICI
-        // Au lieu de vérifier les murs, on parcourt la ligne de la matrice.
-        // C'est moins efficace car on teste les N-1 cellules même si 'u' n'a que 4 voisins max.
         for (int v = 0; v < nb_cellules; v++) {
-            // S'il y a une arête entre u et v (le coût est > 0)
-            // Note: Pour un Dijkstra qui part de la destination, on cherche les arêtes qui "entrent" dans u.
-            // Mais comme notre graphe est non-orienté, graphe[v][u] == graphe[u][v]
-            if (graphe[v][u] > 0 && !n->visite[v]) {
-                // Le coût du pas est le poids de l'arête (v, u)
+            if (graphe[v][u] > 0) { // Si arête (v, u) existe
                 int cout_du_pas = graphe[v][u];
 
                 if (n->distance[u] + cout_du_pas < n->distance[v]) {
                     n->distance[v] = n->distance[u] + cout_du_pas;
                     n->parent[v] = u;
-                    inserer(&t, v, n);
+                    
+                    
+                    if (t.positions[v] == -1) {
+                        inserer(&t, v, n);
+                    } else {
+                        mettre_a_jour_priorite(&t, v, n);
+                    }
                 }
             }
         }
     }
+    
+    // NOUVEAU : Libérer la mémoire des deux tableaux
     free(t.tab);
+    free(t.positions);
 }
 
 
@@ -745,7 +759,14 @@ int A_etoile_laby(int *murs, int lignes, int colonnes, int depart, int destinati
     // Initialisation du tas (file de priorité)
     tas open_set;
     open_set.tab = malloc(sizeof(int) * nb_cellules);
+    open_set.positions = malloc(sizeof(int) * nb_cellules);
     open_set.taille = 0;
+
+    for (int i = 0; i < nb_cellules; i++) {
+        open_set.positions[i] = -1;
+    }
+
+    // Initialiser les positions à -1 (signifie "pas dans le tas")
     inserer(&open_set, depart, n);
 
     int noeuds_visites = 0;
@@ -757,6 +778,7 @@ int A_etoile_laby(int *murs, int lignes, int colonnes, int depart, int destinati
         if (u == destination) {
             free(g_costs);
             free(open_set.tab);
+            free(open_set.positions);
             return noeuds_visites; // Chemin trouvé
         }
 
@@ -793,11 +815,14 @@ int A_etoile_laby(int *murs, int lignes, int colonnes, int depart, int destinati
                 
                 n->distance[v] = g_costs[v] + h_cost; // n->distance est notre f_score
                 
-                // On insère v dans le tas. Si v y est déjà, le tas n'est pas mis à jour
-                // mais la prochaine extraction prendra le v avec le f_score le plus bas.
-                // Pour une implémentation parfaite, il faudrait une fonction "decrease_key".
-                // Mais pour ce cas, ré-insérer est simple et fonctionnel.
-                inserer(&open_set, v, n);
+                // On vérifie si v est DÉJÀ dans le tas (open_set)
+                if (open_set.positions[v] == -1) {
+                    // S'il n'y est pas, on l'insère.
+                    inserer(&open_set, v, n);
+                } else {
+                    // S'il y est déjà, on met simplement sa priorité à jour.
+                    mettre_a_jour_priorite(&open_set, v, n);
+                }
             }
         }
     }
@@ -805,6 +830,7 @@ int A_etoile_laby(int *murs, int lignes, int colonnes, int depart, int destinati
     // Pas de chemin trouvé
     free(g_costs);
     free(open_set.tab);
+    free(open_set.positions);
     return noeuds_visites;
 }
 

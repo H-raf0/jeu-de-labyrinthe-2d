@@ -35,7 +35,8 @@ typedef struct {
 typedef struct tas {
     int *tab;
     int taille;
-}tas;
+    int *positions; 
+} tas;
 
 typedef struct avl {
     int sommet;
@@ -67,6 +68,7 @@ void entasser_bas(tas *t, int i, noeud *n);
 void inserer(tas *t, int sommet, noeud *n);
 int extraire_min(tas *t, noeud *n);
 void afficher_tas(tas *t, noeud *n);
+void mettre_a_jour_priorite(tas *t, int sommet, noeud *n);
 
 //fonctions sur les avl;
 

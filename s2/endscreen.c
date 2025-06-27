@@ -1,7 +1,7 @@
 #include "endscreen.h"
 #include <SDL2/SDL_image.h> // On utilise SDL_image pour être cohérent avec le reste du projet
 
-#define END_SCREEN_SCALE_FACTOR 0.3f
+#define END_SCREEN_SCALE_FACTOR 0.8f
 
 
 // Fonction privée pour l'effet de fondu (prise de votre exemple)

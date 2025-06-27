@@ -80,7 +80,7 @@ void show_main_menu(SDL_Window* window, SDL_Renderer* renderer) {
                             LABY_WI = 15;
                             NOMBRE_MONSTRES = 2;
                             SEUIL_DETECTION_HUNT = 2;
-                            DUREE_PISTE = 50;
+                            DUREE_PISTE = 10;
                             RAPP_CLDWN = 200;
                             MEMOIRE_MAX = 30;
                             VITESSE_MONSTRE = 10;
@@ -95,8 +95,8 @@ void show_main_menu(SDL_Window* window, SDL_Renderer* renderer) {
                             LABY_HE = 20;
                             LABY_WI = 25;
                             NOMBRE_MONSTRES = 3;
-                            SEUIL_DETECTION_HUNT = 7;
-                            DUREE_PISTE = 150;
+                            SEUIL_DETECTION_HUNT = 5;
+                            DUREE_PISTE = 50;
                             RAPP_CLDWN = 80;
                             MEMOIRE_MAX = 200;
                             VITESSE_MONSTRE = 0;
@@ -112,7 +112,7 @@ void show_main_menu(SDL_Window* window, SDL_Renderer* renderer) {
                             LABY_WI = 40;
                             NOMBRE_MONSTRES = 5;
                             SEUIL_DETECTION_HUNT = 10;
-                            DUREE_PISTE = 300;
+                            DUREE_PISTE = 100;
                             RAPP_CLDWN = 50;
                             MEMOIRE_MAX = 99999;
                             VITESSE_MONSTRE = 0;
@@ -209,7 +209,7 @@ void show_main_menu(SDL_Window* window, SDL_Renderer* renderer) {
         draw_sound_icon(renderer, &sound_rect, sound_on, is_hovering_sound);
 
         SDL_RenderPresent(renderer);
-        SDL_Delay(16);
+        SDL_Delay(16); // 60fps
     }
 
     // --- Nettoyage des ressources du menu ---
