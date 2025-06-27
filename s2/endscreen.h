@@ -2,6 +2,7 @@
 #define ENDSCREEN_H
 
 #include <SDL2/SDL.h>
+#include "effetSDL.h"
 
 // Énumération pour savoir comment la partie s'est terminée
 typedef enum {

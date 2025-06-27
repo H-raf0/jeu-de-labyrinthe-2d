@@ -3,7 +3,7 @@
 
 #define END_SCREEN_SCALE_FACTOR 0.8f
 
-
+/*
 // Fonction privée pour l'effet de fondu (prise de votre exemple)
 static void fadeIn(SDL_Renderer *renderer, SDL_Texture *texture) {
     // Obtenir les dimensions de l'écran
@@ -40,25 +40,71 @@ static void fadeIn(SDL_Renderer *renderer, SDL_Texture *texture) {
         SDL_Delay(20);
     }
 }
+*/
 
-// Fonction publique pour afficher l'écran
 void show_end_screen(SDL_Renderer* renderer, const char* image_path) {
-    // On utilise IMG_LoadTexture pour charger des PNG, JPG, BMP, etc.
-    SDL_Texture *end_texture = IMG_LoadTexture(renderer, image_path);
-    if (!end_texture) {
-        printf("Erreur chargement image d'écran de fin %s : %s\n", image_path, IMG_GetError());
+    SDL_Surface* original_surface = IMG_Load(image_path);
+    if (!original_surface) {
+        printf("Erreur chargement image d'écran de fin\n");
         return;
     }
 
-    // Activer le blending pour la transparence
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-    
-    // Lancer l'effet
-    fadeIn(renderer, end_texture);
-    
-    // Attendre un peu
-    SDL_Delay(3000); // 3 secondes
+    //Définir le centre de rotation comme le centre de l'image.
+    Complex center_of_rotation = { 
+        .re = original_surface->w / 2.0f,
+        .im = original_surface->h / 2.0f
+    };
 
-    // Nettoyage
-    SDL_DestroyTexture(end_texture);
+    float angle_rad = 0.0f;
+
+    // Boucle d'animation principale 
+    while (angle_rad <= 6.34 ) {
+        
+        // Appliquer la rotation à la surface ORIGINALE pour créer une nouvelle surface tournée.
+        SDL_Surface* rotated_surface = apply_rotation(original_surface, angle_rad, center_of_rotation);
+        if (!rotated_surface) {
+            printf("L'application de la rotation a échoué.\n");
+            return;
+        }
+
+        // Convertir la surface tournée en texture pour pouvoir la dessiner avec le renderer.
+        SDL_Texture* frame_texture = SDL_CreateTextureFromSurface(renderer, rotated_surface);
+        if(!frame_texture){
+            printf("La création de la texture a échoué.\n");
+            SDL_FreeSurface(rotated_surface); // Nettoyage avant de continuer.
+            continue;
+        }
+
+        // Dessiner la texture à l'écran.
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // Fond noir.
+        SDL_RenderClear(renderer);
+        
+        // Centre l'image à l'écran.
+        int screen_w, screen_h;
+        SDL_GetRendererOutputSize(renderer, &screen_w, &screen_h);
+        SDL_Rect dst_rect = {
+            (screen_w - rotated_surface->w) / 2,
+            (screen_h - rotated_surface->h) / 2,
+            rotated_surface->w,
+            rotated_surface->h
+        };
+        SDL_RenderCopy(renderer, frame_texture, NULL, &dst_rect);
+        SDL_RenderPresent(renderer);
+
+        // Nettoyage DANS LA BOUCLE (critique pour éviter les fuites de mémoire).
+        // On libère la surface et la texture créées spécifiquement pour cette frame.
+        SDL_FreeSurface(rotated_surface);
+        SDL_DestroyTexture(frame_texture);
+
+        // Mettre à jour l'angle pour la prochaine frame.
+        angle_rad += 0.08f; // Vitesse de rotation 
+        SDL_Delay(16);
+    }
+
+
+    // On libère la surface originale qui a servi de modèle pendant toute l'animation.
+    SDL_FreeSurface(original_surface);
+
+    // Petite pause supplémentaire à la fin
+    SDL_Delay(1000);
 }

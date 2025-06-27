@@ -32,7 +32,7 @@ int NOMBRE_PIECES = 3;
 #define ASTRO_FRAME_HEIGHT 16
 #define ASTRO_FRAME_COUNT 6
 
-#define VITESSE_DEPLACEMENT 4.0f // Vitesse du joueur en pixels par frame
+#define VITESSE_DEPLACEMENT 5.0f // Vitesse du joueur en pixels par frame
 
 
 
@@ -84,7 +84,8 @@ typedef struct {
 
     SDL_Texture * texture; // Les sprites de l'astronaute
     SDL_Texture* saut_indicateur_texture;
-    float pixel_x, pixel_y; // Position D'AFFICHAGE en pixels (le centre du sprite)
+    float pixel_x, pixel_y; // Position D'AFFICHAGE en pixels 
+    
     float target_x, target_y; // Position cible en pixels
 
     bool is_moving; // Le personnage est-il en train de bouger entre deux cases ?

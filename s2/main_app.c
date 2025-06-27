@@ -123,7 +123,7 @@ void show_main_menu(SDL_Renderer* renderer) {
                     }
 
                     
-                    // GÉNÉRER LE LABYRINTHE MAINTENANT, AVEC LES BONNES DIMENSIONS
+                    // GÉNÉRER LA LABYRINTHE AVEC LES BONNES DIMENSIONS
                     int lignes = LABY_HE;
                     int colonnes = LABY_WI;
                     int nb_cellules = lignes * colonnes;
@@ -209,14 +209,18 @@ void show_main_menu(SDL_Renderer* renderer) {
         SDL_Delay(16); // =~60fps
     }
 
-    // --- Nettoyage des ressources du menu ---
+    // Nettoyage des ressources du menu
     cleanup_drawing(&background);
     cleanup_audio(&audio_data);
 }
 
 
-int main(int argc, char* argv[]) {
-    (void)argc; (void)argv;
+int main() {
+
+
+    unsigned int seed = time(NULL);
+    printf("seed est : %u\n", seed);
+    srand(seed); 
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
         printf("SDL initialization failed: %s\n", SDL_GetError());
@@ -258,8 +262,7 @@ int main(int argc, char* argv[]) {
     g_config.window_w = dm.w;
     g_config.window_h = dm.h;
 
-    //  Génération du Labyrinthe 
-    srand(time(NULL));
+    
     
 
     //  Lancement du Menu 
