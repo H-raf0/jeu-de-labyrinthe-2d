@@ -35,46 +35,84 @@ SDL_Rect src_murs[16] = {
 
 
 void dessiner_murs_connus(SDL_Renderer* rendu, int x, int y, int *murs, int colonnes) {
-    // Garder la couleur originale pour la restaurer plus tard si besoin
     Uint8 r, g, b, a;
     SDL_GetRenderDrawColor(rendu, &r, &g, &b, &a);
 
-    SDL_SetRenderDrawColor(rendu, 255, 165, 0, 255); // Couleur des murs (orange)
-
-    // Calcul des coordonnées à l'écran en utilisant la configuration globale
     int px = g_config.offset_x + x * g_config.cell_size;
     int py = g_config.offset_y + y * g_config.cell_size;
     int size = g_config.cell_size;
     int thick = g_config.wall_thickness;
-
+    
     int val = murs[y * colonnes + x];
     
     SDL_Rect wall_rect;
 
-    // Mur du HAUT (1)
+    // Top wall
     if (val & 1) {
-        wall_rect = (SDL_Rect){px, py, size, thick};
+        // Layer 1: Outer (cyan)
+        SDL_SetRenderDrawColor(rendu, 0, 255, 255, 255);
+        wall_rect = (SDL_Rect){px, py, size, thick + 3};
         SDL_RenderFillRect(rendu, &wall_rect);
-    }
-    // Mur de DROITE (2)
-    if (val & 2) {
-        wall_rect = (SDL_Rect){px + size - thick, py, thick, size};
+        
+        // Layer 2: Middle (white)
+        SDL_SetRenderDrawColor(rendu, 255, 255, 255, 255);
+        wall_rect = (SDL_Rect){px + 1, py + 1, size - 2, thick + 1};
         SDL_RenderFillRect(rendu, &wall_rect);
-    }
-    // Mur du BAS (4)
-    if (val & 4) {
-        wall_rect = (SDL_Rect){px, py + size - thick, size, thick};
-        SDL_RenderFillRect(rendu, &wall_rect);
-    }
-    // Mur de GAUCHE (8)
-    if (val & 8) {
-        wall_rect = (SDL_Rect){px, py, thick, size};
+        
+        // Layer 3: Inner (dark blue)
+        SDL_SetRenderDrawColor(rendu, 0, 100, 200, 255);
+        wall_rect = (SDL_Rect){px + 2, py + 2, size - 4, thick - 1};
         SDL_RenderFillRect(rendu, &wall_rect);
     }
     
-    // Restaurer la couleur originale
+    // Right wall
+    if (val & 2) {
+        SDL_SetRenderDrawColor(rendu, 0, 255, 255, 255);
+        wall_rect = (SDL_Rect){px + size - thick - 3, py, thick + 3, size};
+        SDL_RenderFillRect(rendu, &wall_rect);
+        
+        SDL_SetRenderDrawColor(rendu, 255, 255, 255, 255);
+        wall_rect = (SDL_Rect){px + size - thick - 2, py + 1, thick + 1, size - 2};
+        SDL_RenderFillRect(rendu, &wall_rect);
+        
+        SDL_SetRenderDrawColor(rendu, 0, 100, 200, 255);
+        wall_rect = (SDL_Rect){px + size - thick - 1, py + 2, thick - 1, size - 4};
+        SDL_RenderFillRect(rendu, &wall_rect);
+    }
+    
+    // Bottom wall
+    if (val & 4) {
+        SDL_SetRenderDrawColor(rendu, 0, 255, 255, 255);
+        wall_rect = (SDL_Rect){px, py + size - thick - 3, size, thick + 3};
+        SDL_RenderFillRect(rendu, &wall_rect);
+        
+        SDL_SetRenderDrawColor(rendu, 255, 255, 255, 255);
+        wall_rect = (SDL_Rect){px + 1, py + size - thick - 2, size - 2, thick + 1};
+        SDL_RenderFillRect(rendu, &wall_rect);
+        
+        SDL_SetRenderDrawColor(rendu, 0, 100, 200, 255);
+        wall_rect = (SDL_Rect){px + 2, py + size - thick - 1, size - 4, thick - 1};
+        SDL_RenderFillRect(rendu, &wall_rect);
+    }
+    
+    // Left wall
+    if (val & 8) {
+        SDL_SetRenderDrawColor(rendu, 0, 255, 255, 255);
+        wall_rect = (SDL_Rect){px, py, thick + 3, size};
+        SDL_RenderFillRect(rendu, &wall_rect);
+        
+        SDL_SetRenderDrawColor(rendu, 255, 255, 255, 255);
+        wall_rect = (SDL_Rect){px + 1, py + 1, thick + 1, size - 2};
+        SDL_RenderFillRect(rendu, &wall_rect);
+        
+        SDL_SetRenderDrawColor(rendu, 0, 100, 200, 255);
+        wall_rect = (SDL_Rect){px + 2, py + 2, thick - 1, size - 4};
+        SDL_RenderFillRect(rendu, &wall_rect);
+    }
+    
     SDL_SetRenderDrawColor(rendu, r, g, b, a);
 }
+
 
 // Affiche le labyrinthe avec SDL
 void afficher_labyrinthe_sdl(arete arbre[], int nb_aretes, int lignes, int colonnes) {

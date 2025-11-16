@@ -1,1 +1,0 @@
-sprite.o: sprite.c
