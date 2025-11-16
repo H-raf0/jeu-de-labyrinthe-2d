@@ -13,7 +13,7 @@ BUILD_UI = $(BUILD_DIR)/ui
 
 # Compiler and flags
 CFLAGS = -I$(INCLUDE_DIR) -Wall -Wextra -g
-LDFLAGS = -lSDL2 -lSDL2_image -lSDL2_mixer -lSDL2_ttf -lSDL2_gfx -lm
+LDFLAGS = -lSDL2 -lSDL2_image -lSDL2_mixer -lm
 
 # Source files
 SOURCES = $(SRC_DIR)/main_app.c \
