@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # 🎮 Labyrinthe 2D - Jeu d'Évasion avec IA
 
 Un jeu de labyrinthe procédural en C avec SDL2, mettant en scène des monstres dotés d'intelligence artificielle avancée et des mécaniques de gameplay dynamiques.
@@ -187,5 +186,3 @@ Projet académique - Faites ce que vous voulez avec ce projet.
 - 📧 achrafelallali123@gmail.com
 - 💼 [linkedin.com/in/achraf-el-allali](https://fr.linkedin.com/in/achraf-el-allali)
 - 🐱 [github.com/H-raf0](https://github.com/H-raf0)
-
----
